@@ -9,11 +9,13 @@ import { FormControlLabel } from '@mui/material';
 import axios from 'axios';
 
 interface Session {
-    session_id: number;
+    session_id?: number;
     name: string;
     start_date: string;
     end_date: string;
     status: boolean;
+    fees: number;
+    commission: number;
 }
 
 const SessionList: React.FC = () => {
@@ -22,110 +24,163 @@ const SessionList: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [openUpdate, setOpenUpdate] = useState(false);
     const [open, setOpen] = useState(false);
-        const [newSession, setNewSession] = useState<Session>({
-            session_id: 0,
+    const [newSession, setNewSession] = useState<Session>({
+        name: '',
+        start_date: '',
+        end_date: '',
+        status: false,
+        fees: 0,
+        commission: 0
+    });
+
+    const handleOpen = () => {
+        setNewSession({
             name: '',
             start_date: '',
             end_date: '',
-            status: false
+            status: false,
+            fees: 0,
+            commission: 0
         });
-        const handleOpen = () => {
-            setOpen(true);
-        }
-        const handleOpenUpdate = (session: Session) => {
-            setNewSession(session);  // Remplir newSession avec les données de la session sélectionnée
-            setOpenUpdate(true);
-        };
-
-        const handleClose = () => {
-            setOpen(false);
-        }
-        const handleCloseUpdate = () => {
-            setOpenUpdate(false);
-        }
-
-
-        const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const { name, value } = e.target;
-            setNewSession({
-                ...newSession,
-                [name]: value
-            });
-        }
-        const handleSubmitAdd = () => {
-            if(newSession.name && newSession.start_date && newSession.end_date) {
-                setSessions([
-                    ...sessions,
-                    { ...newSession, session_id: Date.now() }
-                ]);
-                addSession();
-                setNewSession({ session_id: 0, name: '', start_date: '', end_date: '', status: false });
-                handleClose();
-            }
-        }
-        const handleSubmitUpdate = (session_id: number) => {
-            if(newSession.name && newSession.start_date && newSession.end_date) {
-                setSessions(sessions.map(session => {
-                    if(session.session_id === session_id) {
-                        return newSession;
-                    }
-                    return session;
-                }));
-                updateSession(session_id);
-                setNewSession({ session_id: 0, name: '', start_date: '', end_date: '', status: false });
-                handleCloseUpdate();
-            }
-        }
-
-    useEffect(() => {
-        const fetchSessions = async () => {
-            try {
-                const response = await axios.get('http://localhost:3000/api/sessions/sessions');
-                setSessions(response.data);
-            } catch (error) {
-                console.error('Error fetching sessions:', error);
-            }
-        };
-
-        fetchSessions();
-        }, []);
-
-        const addSession = async () => {
-            if(newSession.name && newSession.start_date && newSession.end_date) {
-            try {
-                const newSessionId = sessions.length > 0 ? sessions[sessions.length - 1].session_id + 1 : 1;
-                const response = await axios.post('http://localhost:3000/api/sessions/sessions', {
-                    session_id: newSessionId,
-                    name: newSession.name,
-                    start_date: newSession.start_date,
-                    end_date: newSession.end_date,
-                    status: newSession.status
-                });
-                setSessions([...sessions, response.data ]);
-            } catch (error) {
-                console.error('Error adding session:', error);
-            }
-        };
+        setOpen(true);
     }
-    const updateSession = async (session_id: number) => {
+
+    const handleOpenUpdate = (session: Session) => {
+        setNewSession(session);
+        setOpenUpdate(true);
+    };
+
+    const handleClose = () => {
+        setOpen(false);
+    }
+
+    const handleCloseUpdate = () => {
+        setOpenUpdate(false);
+    }
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value, type, checked } = e.target;
+        let newValue: any = value;
+
+        if (type === 'number') {
+            newValue = parseFloat(value);
+        } else if (type === 'checkbox') {
+            newValue = checked;
+        }
+
+        setNewSession({
+            ...newSession,
+            [name]: newValue
+        });
+    }
+
+    const handleSubmitAdd = async () => {
+        const { name, start_date, end_date, status, fees, commission } = newSession;
+
+        // Validation des champs
+        if (!name || !start_date || !end_date) {
+            setError('Please fill in all required fields.');
+            return;
+        }
+
         try {
-            const sessionToUpdate = sessions.find(session => session.session_id === session_id);
-            if (sessionToUpdate) {
-                await axios.put(`http://localhost:3000/api/sessions/sessions/${session_id}`, sessionToUpdate);
-            }
+            const response = await axios.post('http://localhost:3000/api/sessions', {
+                name,
+                start_date,
+                end_date,
+                status,
+                fees,
+                commission
+            });
+
+            setSessions([...sessions, response.data]);
+            setNewSession({
+                name: '',
+                start_date: '',
+                end_date: '',
+                status: false,
+                fees: 0,
+                commission: 0
+            });
+            handleClose();
+            setError(null);
+        } catch (error) {
+            console.error('Error adding session:', error);
+            setError('Failed to add session.');
+        }
+    }
+
+    const handleSubmitUpdate = async (session_id: number) => {
+        const { name, start_date, end_date, status, fees, commission } = newSession;
+
+        // Validation des champs
+        if (!name || !start_date || !end_date) {
+            setError('Please fill in all required fields.');
+            return;
+        }
+
+        try {
+            const response = await axios.put(`http://localhost:3000/api/sessions/${session_id}`, {
+                name,
+                start_date,
+                end_date,
+                status,
+                fees,
+                commission
+            });
+
+            setSessions(sessions.map(session => session.session_id === session_id ? response.data : session));
+            setNewSession({
+                name: '',
+                start_date: '',
+                end_date: '',
+                status: false,
+                fees: 0,
+                commission: 0
+            });
+            handleCloseUpdate();
+            setError(null);
         } catch (error) {
             console.error('Error updating session:', error);
+            setError('Failed to update session.');
         }
     }
 
     const deleteSession = async (session_id: number) => {
         try {
-            await axios.delete(`http://localhost:3000/api/sessions/sessions/${session_id}`);
+            await axios.delete(`http://localhost:3000/api/sessions/${session_id}`);
             setSessions(sessions.filter(session => session.session_id !== session_id));
+            setError(null);
         } catch (error) {
             console.error('Error deleting session:', error);
+            setError('Failed to delete session.');
         }
     }
+
+    useEffect(() => {
+        const fetchSessions = async () => {
+            try {
+                const response = await axios.get('http://localhost:3000/api/sessions');
+                setSessions(response.data);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching sessions:', error);
+                setError('Failed to fetch sessions.');
+                setLoading(false);
+            }
+        };
+
+        fetchSessions();
+    }, []);
+
+    if (loading) {
+        return <div className="text-center mt-10">Loading...</div>;
+    }
+
+    if (error) {
+        return <div className="text-center mt-10 text-red-500">{error}</div>;
+    }
+
     return (
         <div className="container mx-auto p-4">
             <div className="text-center mb-4">
@@ -137,23 +192,29 @@ const SessionList: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {sessions.map(session => (
                     <div key={session.session_id} className="bg-white shadow-md rounded-lg p-4">
-                        <div className="flex justify-center items-center mb-2">
+                        <div className="flex justify-between items-center mb-2">
                             <h2 className="text-xl font-semibold">{session.name}</h2>
-                            <IconButton aria-label="delete" size="small" onClick={() => deleteSession(session.session_id)}>
-                                <DeleteIcon />
-                            </IconButton>
-                            <IconButton aria-label="update" size="small" onClick={() => handleOpenUpdate(session)}>
-                                <UpdateIcon />
-                            </IconButton>
+                            <div>
+                                <IconButton aria-label="update" size="small" onClick={() => handleOpenUpdate(session)}>
+                                    <UpdateIcon />
+                                </IconButton>
+                                <IconButton aria-label="delete" size="small" onClick={() => deleteSession(session.session_id!)}>
+                                    <DeleteIcon />
+                                </IconButton>
+                            </div>
                         </div>
                         <p className="text-gray-600">Start Date: {new Date(session.start_date).toLocaleDateString()}</p>
                         <p className="text-gray-600">End Date: {new Date(session.end_date).toLocaleDateString()}</p>
+                        <p className="text-gray-600">Fees: {session.fees} %</p>
+                        <p className="text-gray-600">Commission: {session.commission} %</p>
                         <p className="text-gray-600">Status: {session.status ? 'Active' : 'Inactive'}</p>
                     </div>
                 ))}
             </div>
+
+            {/* Add Session Modal */}
             <Modal open={open} onClose={handleClose}>
-                <Box className="bg-white p-4 rounded-lg w-96 mx-auto mt-20">
+                <Box className="bg-white p-6 rounded-lg w-full max-w-md mx-auto mt-20">
                     <Typography variant="h4" className="text-center mb-4">Add Session</Typography>
                     <TextField
                         label="Name"
@@ -165,7 +226,7 @@ const SessionList: React.FC = () => {
                         className="mb-4"
                     />
                     <TextField
-                        label=""
+                        label="Start Date"
                         name="start_date"
                         type="date"
                         value={newSession.start_date}
@@ -173,9 +234,12 @@ const SessionList: React.FC = () => {
                         variant="outlined"
                         fullWidth
                         className="mb-4"
+                        InputLabelProps={{
+                            shrink: true,
+                        }}
                     />
                     <TextField
-                        label=""
+                        label="End Date"
                         name="end_date"
                         type="date"
                         value={newSession.end_date}
@@ -183,6 +247,31 @@ const SessionList: React.FC = () => {
                         variant="outlined"
                         fullWidth
                         className="mb-4"
+                        InputLabelProps={{
+                            shrink: true,
+                        }}
+                    />
+                    <TextField 
+                        label="Fees"
+                        name="fees"
+                        type="number"
+                        value={newSession.fees}
+                        onChange={handleInputChange}
+                        variant="outlined"
+                        fullWidth
+                        className="mb-4"
+                        inputProps={{ step: "0.01" }}
+                    />
+                    <TextField 
+                        label="Commission"
+                        name="commission"
+                        type="number"
+                        value={newSession.commission}
+                        onChange={handleInputChange}
+                        variant="outlined"
+                        fullWidth
+                        className="mb-4"
+                        inputProps={{ step: "0.01" }}
                     />
                     <FormControlLabel
                         control={
@@ -191,16 +280,20 @@ const SessionList: React.FC = () => {
                                 onChange={(e) => setNewSession({ ...newSession, status: e.target.checked })}
                                 name="status"
                                 color="primary"
-                            />}
+                            />
+                        }
                         label="Active"
+                        className="mb-4"
                     />
                     <Button variant="contained" onClick={handleSubmitAdd} fullWidth>
                         Add Session
                     </Button>
                 </Box>
             </Modal>
+
+            {/* Update Session Modal */}
             <Modal open={openUpdate} onClose={handleCloseUpdate}>
-                <Box className="bg-white p-4 rounded-lg w-96 mx-auto mt-20">
+                <Box className="bg-white p-6 rounded-lg w-full max-w-md mx-auto mt-20">
                     <Typography variant="h4" className="text-center mb-4">Update Session</Typography>
                     <TextField
                         label="Name"
@@ -212,7 +305,7 @@ const SessionList: React.FC = () => {
                         className="mb-4"
                     />
                     <TextField
-                        label=""
+                        label="Start Date"
                         name="start_date"
                         type="date"
                         value={newSession.start_date}
@@ -220,9 +313,12 @@ const SessionList: React.FC = () => {
                         variant="outlined"
                         fullWidth
                         className="mb-4"
+                        InputLabelProps={{
+                            shrink: true,
+                        }}
                     />
                     <TextField
-                        label=""
+                        label="End Date"
                         name="end_date"
                         type="date"
                         value={newSession.end_date}
@@ -230,24 +326,52 @@ const SessionList: React.FC = () => {
                         variant="outlined"
                         fullWidth
                         className="mb-4"
+                        InputLabelProps={{
+                            shrink: true,
+                        }}
+                    />
+                    <TextField 
+                        label="Fees"
+                        name="fees"
+                        type="number"
+                        value={newSession.fees}
+                        onChange={handleInputChange}
+                        variant="outlined"
+                        fullWidth
+                        className="mb-4"
+                        inputProps={{ step: "0.01" }}
+                    />
+                    <TextField 
+                        label="Commission"
+                        name="commission"
+                        type="number"
+                        value={newSession.commission}
+                        onChange={handleInputChange}
+                        variant="outlined"
+                        fullWidth
+                        className="mb-4"
+                        inputProps={{ step: "0.01" }}
                     />
                     <FormControlLabel
                         control={
-                        <Switch 
-                            checked={newSession.status} 
-                            onChange={(e) => setNewSession({ ...newSession, status: e.target.checked })}
-                            name="status"
-                            color="primary"
-                        />}
-                    label="Active"
+                            <Switch 
+                                checked={newSession.status} 
+                                onChange={(e) => setNewSession({ ...newSession, status: e.target.checked })}
+                                name="status"
+                                color="primary"
+                            />
+                        }
+                        label="Active"
+                        className="mb-4"
                     />
-                    <Button variant="contained" onClick={() => handleSubmitUpdate(newSession.session_id)} fullWidth>
+                    <Button variant="contained" onClick={() => handleSubmitUpdate(newSession.session_id!)} fullWidth>
                         Update Session
                     </Button>
                 </Box>
             </Modal>
         </div>
     );
+
 }
 
 export default SessionList;
