@@ -3,11 +3,13 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import Homepage from './pages/Homepage';
-import SellerList from './components/SellerList';
-import BuyerList from './components/BuyerList';
-import SessionList from './components/SessionList';
-import GamesList from './components/GamesList';
+import SellerList from './components/sellers/SellerList';
+import BuyerList from './components/buyers/BuyerList';
+import SessionList from './components/session/SessionList';
+import GamesList from './components/games/GamesList';
+import GestionDeDepots from './components/deposit/GestionDepots';
 import reportWebVitals from './reportWebVitals';
+
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -21,6 +23,8 @@ root.render(
     <SessionList />
     <Homepage />
     <GamesList />
+    <Homepage />
+    <GestionDeDepots />
   </React.StrictMode>
 );
 
