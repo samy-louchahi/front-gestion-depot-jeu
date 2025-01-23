@@ -166,9 +166,9 @@ const BuyerList: React.FC = () => {
 
     return (
         <div className="flex flex-col items-center space-y-4">
-            <h1 className="text-3xl font-bold mb-4">Liste des Buyers</h1>
+            <h1 className="text-3xl font-bold mb-4">Liste des Acheteurs</h1>
             <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
-                Ajouter un Buyer
+                Ajouter un Acheteur
             </Button>
             {error && <div className="text-center mt-2 text-red-500">{error}</div>}
             <ul className="space-y-4 w-full max-w-md">
@@ -178,16 +178,16 @@ const BuyerList: React.FC = () => {
                             <h2 className="text-xl font-semibold">{buyer.name}</h2>
                             <div className="flex space-x-2">
                                 <IconButton onClick={() => handleOpenUpdate(buyer)}>
-                                    <UpdateIcon />
+                                    <UpdateIcon className="text-blue-500" />
                                 </IconButton>
                                 <IconButton onClick={() => deleteBuyer(buyer.buyer_id!)}>
-                                    <DeleteIcon />
+                                    <DeleteIcon className="text-red-500"/>
                                 </IconButton>
                             </div>
                         </div>
                         <p>Email: {buyer.email}</p>
-                        <p>Phone: {buyer.phone}</p>
-                        <p>Address: {buyer.address}</p>
+                        <p>Téléphone: {buyer.phone}</p>
+                        <p>Addresse: {buyer.address}</p>
                     </li>
                 ))}
             </ul>
@@ -209,7 +209,7 @@ const BuyerList: React.FC = () => {
                     }}
                 >
                     <Typography variant="h6" id="add-buyer-modal">
-                        Ajouter un nouveau Buyer
+                        Ajouter un nouvelle Acheteur
                     </Typography>
 
                     <TextField

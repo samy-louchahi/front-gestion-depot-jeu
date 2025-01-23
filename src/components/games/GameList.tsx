@@ -11,7 +11,7 @@ interface Game {
     publisher: string;
 }
 
-const GamesList: React.FC = () => {
+const GameList: React.FC = () => {
     const [games, setGames] = useState<Game[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -193,4 +193,4 @@ const GamesList: React.FC = () => {
     );
 };
 
-export default GamesList;
+export default GameList;
