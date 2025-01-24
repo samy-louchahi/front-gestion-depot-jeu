@@ -6,6 +6,9 @@ import SellerPage from './pages/SellerPage';
 import BuyerPage from './pages/BuyerPage';
 import GamePage from './pages/GamePage';
 import Homepage from './pages/Homepage'; // Si nécessaire
+import SessionPage from './pages/SessionPage';
+import DepositPage from './pages/DepositPage';
+import SalePage from './pages/SalePage';
 import { AppBar, Toolbar, Typography, Button } from '@mui/material';
 
 const App: React.FC = () => {
@@ -28,6 +31,15 @@ const App: React.FC = () => {
                     <Button color="inherit" component={Link} to="/games">
                         Jeux
                     </Button>
+                    <Button color="inherit" component={Link} to="/session">
+                      Session
+                    </Button>
+                    <Button color="inherit" component={Link} to="/deposit">
+                      Dépôt
+                    </Button>
+                    <Button color="inherit" component={Link} to="/sale">
+                      Vente
+                    </Button>
                     
                 </Toolbar>
             </AppBar>
@@ -36,6 +48,9 @@ const App: React.FC = () => {
                 <Route path="/sellers" element={<SellerPage />} />
                 <Route path="/buyers" element={<BuyerPage />} />
                 <Route path="/games" element={<GamePage />} />
+                <Route path='/session' element={<SessionPage />} />
+                <Route path='/deposit' element={<DepositPage />} />
+                <Route path='/sale' element={<SalePage />} />
             </Routes>
         </Router>
     );

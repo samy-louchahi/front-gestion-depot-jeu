@@ -17,8 +17,8 @@ import {
     IconButton
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { Seller, Stock, Sale, Balance } from '../../types';
-import { getSellerStocks, getSellerSales, getSellerBalance } from '../../services/sellerService';
+import { Seller, Stock, SaleDetail, Balance } from '../../types';
+import { getSellerStocks, getSellerSaleDetails, getAllSellerBalances } from '../../services/sellerService';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 interface SellerDetailModalProps {
@@ -29,26 +29,24 @@ interface SellerDetailModalProps {
 
 const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, seller }) => {
     const [stocks, setStocks] = useState<Stock[]>([]);
-    const [sales, setSales] = useState<Sale[]>([]);
-    const [balance, setBalance] = useState<Balance | null>(null);
+    const [saleDetails, setSaleDetails] = useState<SaleDetail[]>([]);
+    const [balances, setBalances] = useState<Balance[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-
-    // Suppose que la session actuelle est identifiée quelque part, par exemple via le contexte ou les props
-    const currentSessionId = 1; // Remplace par la logique appropriée
 
     useEffect(() => {
         const fetchDetails = async () => {
             setLoading(true);
             try {
-                const [stocksData, salesData, balanceData] = await Promise.all([
+                // Récupérer les stocks, les détails des ventes et les bilans
+                const [stocksData, saleDetailsData, balancesData] = await Promise.all([
                     getSellerStocks(seller.seller_id),
-                    getSellerSales(seller.seller_id),
-                    getSellerBalance(currentSessionId, seller.seller_id)
+                    getSellerSaleDetails(seller.seller_id),
+                    getAllSellerBalances(seller.seller_id)
                 ]);
                 setStocks(stocksData);
-                setSales(salesData);
-                setBalance(balanceData);
+                setSaleDetails(saleDetailsData);
+                setBalances(balancesData);
                 setError(null);
             } catch (err: any) {
                 console.error(err);
@@ -62,6 +60,9 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
             fetchDetails();
         }
     }, [open, seller]);
+
+    // Vérifier si toutes les données sont vides
+    const isAllDataEmpty = stocks.length === 0 && saleDetails.length === 0 && balances.length === 0;
 
     return (
         <Modal
@@ -101,6 +102,10 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
                     <Typography color="error" className="text-center mt-10">
                         {error}
                     </Typography>
+                ) : isAllDataEmpty ? (
+                    <Typography className="text-center mt-10" variant="h6">
+                        Aucun détail disponible pour ce vendeur.
+                    </Typography>
                 ) : (
                     <Box className="mt-4 space-y-8">
                         {/* Informations Générales */}
@@ -110,11 +115,12 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
                             </Typography>
                             <Box className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <Typography variant="body1">
-                                    <strong>Email:</strong> {seller.email}
+                                    <strong>Email :</strong> {seller.email}
                                 </Typography>
                                 <Typography variant="body1">
-                                    <strong>Téléphone:</strong> {seller.phone}
+                                    <strong>Téléphone :</strong> {seller.phone}
                                 </Typography>
+                                {/* Supprimé : Adresse */}
                             </Box>
                         </Box>
 
@@ -154,7 +160,7 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
                             <Typography variant="h6" className="mb-2 text-blue-600">
                                 Ventes Effectuées
                             </Typography>
-                            {sales.length > 0 ? (
+                            {saleDetails.length > 0 ? (
                                 <TableContainer component={Paper} className="rounded-lg">
                                     <Table>
                                         <TableHead>
@@ -166,27 +172,18 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                            {sales.map(sale => (
-                                                <TableRow key={sale.sale_id} className="hover:bg-gray-50 transition-colors duration-200">
-                                                    <TableCell>{sale.sale_id}</TableCell>
-                                                    <TableCell>{sale.Buyer?.name || 'N/A'}</TableCell>
+                                            {saleDetails.map(detail => (
+                                                <TableRow key={detail.sale_detail_id} className="hover:bg-gray-50 transition-colors duration-200">
+                                                    <TableCell>{detail.sale_id}</TableCell>
+                                                    <TableCell>{detail.Sale?.Buyer?.name || 'N/A'}</TableCell>
                                                     <TableCell>
-                                                        {new Date(sale.sale_date).toLocaleDateString('fr-FR', {
-                                                            year: 'numeric',
-                                                            month: 'long',
-                                                            day: 'numeric'
-                                                        })}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {sale.SaleDetail?.length ?? 0 > 0 ? (
-                                                            (sale.SaleDetail ?? []).map(detail => (
-                                                                <Typography key={detail.sale_detail_id} variant="body2">
-                                                                    {detail.DepositGame?.Game?.name || 'N/A'} - Quantité: {detail.quantity}
-                                                                </Typography>
-                                                            ))
-                                                        ) : (
-                                                            'Aucun détail'
-                                                        )}
+                                                        {detail.Sale?.sale_date
+                                                            ? new Date(detail.Sale.sale_date).toLocaleDateString('fr-FR', {
+                                                                  year: 'numeric',
+                                                                  month: 'long',
+                                                                  day: 'numeric'
+                                                              })
+                                                            : 'N/A'}
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -198,29 +195,40 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
                             )}
                         </Box>
 
-                        {/* Solde Financier */}
+                        {/* Bilans par Session */}
                         <Box>
                             <Typography variant="h6" className="mb-2 text-blue-600">
-                                Solde Financier
+                                Bilans par Session
                             </Typography>
-                            {balance ? (
-                                <Box className="space-y-2">
-                                    <Typography variant="body1">
-                                        <strong>Frais de Dépôt:</strong> {formatCurrency(balance.totalDepositFees)}
-                                    </Typography>
-                                    <Typography variant="body1">
-                                        <strong>Total Ventes:</strong> {formatCurrency(balance.totalSales)}
-                                    </Typography>
-                                    <Typography variant="body1">
-                                        <strong>Total Commissions:</strong> {formatCurrency(balance.totalCommission)}
-                                    </Typography>
-                                    <Divider className="my-2" />
-                                    <Typography variant="h6" className="text-green-600">
-                                        <strong>Bénéfice Total du vendeur:</strong> {formatCurrency(balance.totalBenef)}
-                                    </Typography>
-                                </Box>
+                            {balances.length > 0 ? (
+                                <TableContainer component={Paper} className="rounded-lg">
+                                    <Table>
+                                        <TableHead>
+                                            <TableRow className="bg-gray-100">
+                                                <TableCell><strong>Session</strong></TableCell>
+                                                <TableCell align="right"><strong>Frais de Dépôt</strong></TableCell>
+                                                <TableCell align="right"><strong>Total Ventes</strong></TableCell>
+                                                <TableCell align="right"><strong>Total Commissions</strong></TableCell>
+                                                <TableCell align="right"><strong>Bénéfice Total</strong></TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {balances.map(balance => (
+                                                <TableRow key={balance.session_id} className="hover:bg-gray-50 transition-colors duration-200">
+                                                    <TableCell>{balance.session_id || `Session ID: ${balance.session_id}`}</TableCell>
+                                                    <TableCell align="right">{formatCurrency(balance.totalDepositFees)}</TableCell>
+                                                    <TableCell align="right">{formatCurrency(balance.totalSales)}</TableCell>
+                                                    <TableCell align="right">{formatCurrency(balance.totalCommission)}</TableCell>
+                                                    <TableCell align="right" className="font-semibold text-green-600">
+                                                        {formatCurrency(balance.totalBenef)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
                             ) : (
-                                <Typography>Aucune donnée financière disponible.</Typography>
+                                <Typography>Aucun bilan disponible.</Typography>
                             )}
                         </Box>
                     </Box>

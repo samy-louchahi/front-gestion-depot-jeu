@@ -19,14 +19,27 @@ export interface Game {
     publisher: string;
 }
 
+export interface DepositGame {
+    deposit_game_id?: number; // Optionnel car généré par le backend
+    deposit_id: number;
+    game_id: number;
+    price: number;
+    fees: number;
+    quantity: number;
+    Game?: Game; // Association avec Game
+}
+
 export interface Deposit {
     deposit_id?: number; // Optionnel car généré par le backend
+    deposit_date: string; // Correction : "date" en "deposit_date"
     seller_id: number;
-    buyer_id: number;
-    date: string; // Format ISO, ex: "2025-01-22"
-    quantity: number;
-    games: number[]; // Liste des game_id inclus dans le dépôt
+    session_id: number;
+    discount_fees?: number;
+    Seller?: Seller; // Association avec Seller
+    Session?: Session; // Association avec Session
+    DepositGames?: DepositGame[]; // Association avec DepositGame
 }
+
 export interface Session {
     session_id?: number;
     name: string;
@@ -36,26 +49,35 @@ export interface Session {
     fees: number;
     commission: number;
 }
-export interface Sale {
-    sale_id: number;
-    buyer_id: number | null;
-    session_id: number;
-    sale_date: string; // ISO Date string
-    // Associations
-    Buyer?: Buyer;
-    Session?: Session;
-    SaleDetail?: SaleDetail[];
-}
-
 export interface SaleDetail {
-    sale_detail_id: number;
+    sale_detail_id?: number;
     sale_id: number;
     seller_id: number;
     deposit_game_id: number;
     quantity: number;
-    // Associations
     Sale?: Sale;
     DepositGame?: DepositGame;
+}
+
+export interface SalesOperation {
+    sales_op_id?: number;
+    sale_id: number;
+    commission: number;
+    sale_date: string; // Format ISO
+    sale_status: 'en cours' | 'finalisé' | 'annulé';
+    Sale?: Sale;
+}
+
+export interface Sale {
+    sale_id?: number;
+    buyer_id?: number | null;
+    session_id: number;
+    sale_date: string; // Format ISO
+    sale_status?: 'en cours' | 'finalisé' | 'annulé';
+    Buyer?: Buyer;
+    Session?: Session;
+    SaleDetails?: SaleDetail[];
+    SalesOperation?: SalesOperation;
 }
 
 export interface Balance {
@@ -66,26 +88,7 @@ export interface Balance {
     totalCommission: number;
     totalBenef: number;
 }
-export interface DepositGame {
-    deposit_game_id: number;
-    label: string;
-    fees: number;
-    price: number;
-    deposit_id: number;
-    game_id: number;
-    // Associations
-    Deposit?: Deposit;
-    Game?: Game;
-}
-export interface SalesOperation {
-    sales_op_id: number;
-    sale_id: number;
-    commission: number;
-    sale_date: string;
-    sale_status: 'en cours' | 'finalisé' | 'annulé';
-    // Associations
-    Sale?: Sale;
-}
+
 export interface Stock {
     stock_id: number;
     session_id: number;
