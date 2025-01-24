@@ -157,6 +157,7 @@ const UpdateSaleModal: React.FC<UpdateSaleModalProps> = ({ open, onClose, sale, 
                 buyer_id: selectedBuyer ? Number(selectedBuyer) : null,
                 session_id: Number(selectedSession),
                 sale_date: saleDate,
+                sale_status: saleStatus,
             });
 
             // Mettre à jour les détails de vente
