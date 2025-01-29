@@ -1,52 +1,42 @@
-// src/components/sessions/SessionCard.tsx
-
 import React from 'react';
+import { Session } from '../../types';
 import { IconButton, Typography, Box } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UpdateIcon from '@mui/icons-material/Update';
-import { formatCurrency } from '../../utils/formatCurrency';
-
-interface Session {
-    session_id?: number;
-    name: string;
-    start_date: string;
-    end_date: string;
-    status: boolean;
-    fees: number;
-    commission: number;
-}
 
 interface SessionCardProps {
     session: Session;
     onDelete: (id: number) => void;
     onUpdate: (session: Session) => void;
+    onViewDetails: (session: Session) => void;
 }
 
-const SessionCard: React.FC<SessionCardProps> = ({ session, onDelete, onUpdate }) => {
+const SessionCard: React.FC<SessionCardProps> = ({ session, onDelete, onUpdate, onViewDetails }) => {
     return (
         <Box
             className={`bg-white shadow-md rounded-lg p-4 border ${
                 session.status ? 'border-green-500' : 'border-gray-300'
-            }`}
+            } cursor-pointer hover:bg-gray-100`}
+            onClick={() => onViewDetails(session)}
         >
             <Box className="flex justify-between items-center mb-2">
                 <Typography variant="h6" component="h2">
                     {session.name}
                 </Typography>
-                <Box>
+                <Box onClick={(e) => e.stopPropagation()}>
                     <IconButton
                         aria-label="update"
                         size="small"
                         onClick={() => onUpdate(session)}
                     >
-                        <UpdateIcon />
+                        <UpdateIcon className="text-blue-500" />
                     </IconButton>
                     <IconButton
                         aria-label="delete"
                         size="small"
                         onClick={() => session.session_id && onDelete(session.session_id)}
                     >
-                        <DeleteIcon />
+                        <DeleteIcon className="text-red-500" />
                     </IconButton>
                 </Box>
             </Box>

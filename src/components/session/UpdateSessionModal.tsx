@@ -1,23 +1,15 @@
 // src/components/sessions/UpdateSessionModal.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Modal, Box, TextField, Typography, Button } from '@mui/material';
+import { Modal, Box, TextField, Typography, Button, Switch, FormControlLabel } from '@mui/material';
+import { Session } from '../../types';
+import { updateSession } from '../../services/sessionService';
 
 interface UpdateSessionModalProps {
     open: boolean;
     onClose: () => void;
     onUpdate: (session: Session) => void;
     session: Session | null;
-}
-
-interface Session {
-    session_id?: number;
-    name: string;
-    start_date: string;
-    end_date: string;
-    status: boolean;
-    fees: number;
-    commission: number;
 }
 
 const UpdateSessionModal: React.FC<UpdateSessionModalProps> = ({ open, onClose, onUpdate, session }) => {
@@ -57,8 +49,8 @@ const UpdateSessionModal: React.FC<UpdateSessionModalProps> = ({ open, onClose, 
         });
     };
 
-    const handleSubmit = () => {
-        const { name, start_date, end_date, fees, commission } = updatedSession;
+    const handleSubmit = async () => {
+        const { session_id, name, start_date, end_date, fees, commission, status } = updatedSession;
 
         // Validation des champs
         if (!name || !start_date || !end_date) {
@@ -66,9 +58,27 @@ const UpdateSessionModal: React.FC<UpdateSessionModalProps> = ({ open, onClose, 
             return;
         }
 
-        onUpdate(updatedSession);
-        setError(null);
-        onClose();
+        if (!session_id) {
+            setError('ID de session manquant.');
+            return;
+        }
+
+        try {
+            await updateSession(session_id, {
+                name,
+                start_date,
+                end_date,
+                fees,
+                commission,
+                status
+            });
+            setError(null);
+            onUpdate(updatedSession);
+            onClose();
+        } catch (err: any) {
+            console.error('Erreur lors de la mise à jour de la session:', err);
+            setError(err.response?.data?.error || 'Échec de la mise à jour de la session.');
+        }
     };
 
     if (!session) return null;
@@ -143,6 +153,18 @@ const UpdateSessionModal: React.FC<UpdateSessionModalProps> = ({ open, onClose, 
                     fullWidth
                     className="mb-4"
                     inputProps={{ step: "0.01" }}
+                />
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={updatedSession.status}
+                            onChange={handleInputChange}
+                            name="status"
+                            color="primary"
+                        />
+                    }
+                    label="Statut Actif"
+                    className="mb-4"
                 />
                 {error && (
                     <Typography color="error" className="mb-2">

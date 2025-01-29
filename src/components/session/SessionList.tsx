@@ -1,25 +1,14 @@
 // src/components/sessions/SessionList.tsx
 
 import React, { useEffect, useState } from 'react';
-import Button from '@mui/material/Button';
-import { IconButton, Typography } from '@mui/material';
+import { Button, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import UpdateIcon from '@mui/icons-material/Update';
-import axios from 'axios';
+import { Session } from '../../types';
+import { getSessions, deleteSession } from '../../services/sessionService';
 import SessionCard from './SessionCard';
 import AddSessionModal from './AddSessionModal';
 import UpdateSessionModal from './UpdateSessionModal';
-
-interface Session {
-    session_id?: number;
-    name: string;
-    start_date: string;
-    end_date: string;
-    status: boolean;
-    fees: number;
-    commission: number;
-}
+import ConfirmationDialog from '../common/ConfirmationDialog';
 
 const SessionList: React.FC = () => {
     const [sessions, setSessions] = useState<Session[]>([]);
@@ -28,101 +17,102 @@ const SessionList: React.FC = () => {
     const [openAdd, setOpenAdd] = useState(false);
     const [openUpdate, setOpenUpdate] = useState(false);
     const [currentSession, setCurrentSession] = useState<Session | null>(null);
+    const [openConfirm, setOpenConfirm] = useState<boolean>(false);
+    const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
+    const [openDetailModal, setOpenDetailModal] = useState<boolean>(false);
+    const [detailSession, setDetailSession] = useState<Session | null>(null);
 
-    const handleOpenAdd = () => {
-        setCurrentSession(null);
-        setOpenAdd(true);
-    }
+    const fetchSessions = async () => {
+        setLoading(true);
+        try {
+            const data = await getSessions();
+            setSessions(data);
+            setError(null);
+        } catch (err: any) {
+            console.error(err);
+            setError('Échec de la récupération des sessions.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const handleCloseAdd = () => {
-        setOpenAdd(false);
-    }
+    useEffect(() => {
+        fetchSessions();
+    }, []);
 
-    const handleOpenUpdate = (session: Session) => {
+    const handleDelete = (session_id: number) => {
+        setSessionToDelete(session_id);
+        setOpenConfirm(true);
+    };
+
+    const confirmDelete = async () => {
+        if (sessionToDelete === null) return;
+        try {
+            await deleteSession(sessionToDelete);
+            setSessions(sessions.filter(session => session.session_id !== sessionToDelete));
+            setError(null);
+        } catch (err: any) {
+            console.error(err);
+            setError('Erreur lors de la suppression de la session.');
+        } finally {
+            setOpenConfirm(false);
+            setSessionToDelete(null);
+        }
+    };
+
+    const cancelDelete = () => {
+        setOpenConfirm(false);
+        setSessionToDelete(null);
+    };
+
+    const handleUpdate = (session: Session) => {
         setCurrentSession(session);
         setOpenUpdate(true);
     };
 
-    const handleCloseUpdate = () => {
+    const handleAdd = () => {
+        setCurrentSession(null);
+        setOpenAdd(true);
+    };
+
+    const handleFormClose = () => {
+        setOpenAdd(false);
         setOpenUpdate(false);
-    }
+        setCurrentSession(null);
+        fetchSessions(); // Rafraîchir la liste après ajout/mise à jour
+    };
 
-    const handleAddSession = async (newSession: Omit<Session, 'session_id' | 'status'>) => {
-        try {
-            const response = await axios.post('http://localhost:3000/api/sessions', {
-                ...newSession,
-                status: false // Initialiser le statut par défaut
-            });
+    const handleViewDetails = (session: Session) => {
+        setDetailSession(session);
+        setOpenDetailModal(true);
+    };
 
-            setSessions([...sessions, response.data]);
-            setError(null);
-        } catch (error) {
-            console.error('Error adding session:', error);
-            setError('Échec de l\'ajout de la session.');
-        }
-    }
-
-    const handleUpdateSession = async (updatedSession: Session) => {
-        const { session_id, ...updateData } = updatedSession;
-
-        if (!session_id) {
-            setError('ID de session manquant.');
-            return;
-        }
-
-        try {
-            const response = await axios.put(`http://localhost:3000/api/sessions/${session_id}`, updateData);
-            setSessions(sessions.map(session => session.session_id === session_id ? response.data : session));
-            setError(null);
-        } catch (error) {
-            console.error('Error updating session:', error);
-            setError('Échec de la mise à jour de la session.');
-        }
-    }
-
-    const handleDeleteSession = async (session_id: number) => {
-        try {
-            await axios.delete(`http://localhost:3000/api/sessions/${session_id}`);
-            setSessions(sessions.filter(session => session.session_id !== session_id));
-            setError(null);
-        } catch (error) {
-            console.error('Error deleting session:', error);
-            setError('Échec de la suppression de la session.');
-        }
-    }
-
-    useEffect(() => {
-        const fetchSessions = async () => {
-            try {
-                const response = await axios.get('http://localhost:3000/api/sessions');
-                setSessions(response.data);
-                setLoading(false);
-            } catch (error) {
-                console.error('Error fetching sessions:', error);
-                setError('Échec de la récupération des sessions.');
-                setLoading(false);
-            }
-        };
-
-        fetchSessions();
-    }, []);
+    const handleDetailModalClose = () => {
+        setOpenDetailModal(false);
+        setDetailSession(null);
+    };
 
     if (loading) {
-        return <div className="text-center mt-10">Chargement...</div>;
+        return <Typography className="text-center mt-10">Chargement...</Typography>;
     }
 
     return (
         <div className="container mx-auto p-4">
-            <div className="text-center mb-4">
+            <div className="flex flex-col items-center mb-6">
                 <Typography variant="h4" className="font-bold mb-4">
                     Liste des Sessions
                 </Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAdd}>
+                <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleAdd}
+                    className="bg-blue-500 hover:bg-blue-600"
+                >
                     Créer une Session
                 </Button>
             </div>
             {error && (
-                <Typography className="text-center mb-4 text-red-500">
+                <Typography color="error" className="text-center mb-4">
                     {error}
                 </Typography>
             )}
@@ -132,8 +122,9 @@ const SessionList: React.FC = () => {
                         <SessionCard
                             key={session.session_id}
                             session={session}
-                            onDelete={handleDeleteSession}
-                            onUpdate={handleOpenUpdate}
+                            onDelete={handleDelete}
+                            onUpdate={handleUpdate}
+                            onViewDetails={handleViewDetails}
                         />
                     ))
                 ) : (
@@ -146,17 +137,36 @@ const SessionList: React.FC = () => {
             {/* Add Session Modal */}
             <AddSessionModal
                 open={openAdd}
-                onClose={handleCloseAdd}
-                onAdd={handleAddSession}
+                onClose={handleFormClose}
+                onAdd={(newSession) => {
+                    // Mettre à jour l'état local
+                    setSessions([...sessions, { ...newSession, status: false, session_id: Date.now() }]);
+                    handleFormClose();
+                }}
             />
 
             {/* Update Session Modal */}
             <UpdateSessionModal
                 open={openUpdate}
-                onClose={handleCloseUpdate}
-                onUpdate={handleUpdateSession}
+                onClose={handleFormClose}
+                onUpdate={(updatedSession) => {
+                    setSessions(sessions.map(session => session.session_id === updatedSession.session_id ? updatedSession : session));
+                    handleFormClose();
+                }}
                 session={currentSession}
             />
+
+            {/* Dialogue de Confirmation Suppression */}
+            <ConfirmationDialog
+                open={openConfirm}
+                title="Confirmer la Suppression"
+                content="Êtes-vous sûr de vouloir supprimer cette session ?"
+                onConfirm={confirmDelete}
+                onCancel={cancelDelete}
+            />
+
+            {/* Modal Détail Session (Optionnel) */}
+            
         </div>
     );
 }

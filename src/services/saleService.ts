@@ -1,12 +1,10 @@
 // src/services/saleService.ts
 
-import axios from 'axios';
+import api from './api';
 import { Sale, SalesOperation, SaleDetail } from '../types';
 
 // Configurer une instance Axios avec une baseURL
-const api = axios.create({
-    baseURL: 'http://localhost:3000/api', // Remplacez par votre baseURL si différente
-});
+
 
 // **Sale Services**
 

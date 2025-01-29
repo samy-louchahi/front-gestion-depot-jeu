@@ -1,12 +1,9 @@
 // src/services/depositService.ts
 
-import axios from 'axios';
+import api from './api';
 import { Deposit, DepositGame, Game, Session, Seller } from '../types';
 
 // Configurer une instance axios avec une baseURL
-const api = axios.create({
-    baseURL: 'http://localhost:3000/api', // Remplacez par votre baseURL si différente
-});
 
 // **Deposit Services**
 

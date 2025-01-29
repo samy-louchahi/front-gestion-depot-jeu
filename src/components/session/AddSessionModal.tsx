@@ -2,21 +2,13 @@
 
 import React, { useState } from 'react';
 import { Modal, Box, TextField, Typography, Button } from '@mui/material';
+import { Session } from '../../types';
+import { createSession } from '../../services/sessionService';
 
 interface AddSessionModalProps {
     open: boolean;
     onClose: () => void;
     onAdd: (session: Omit<Session, 'session_id' | 'status'>) => void;
-}
-
-interface Session {
-    session_id?: number;
-    name: string;
-    start_date: string;
-    end_date: string;
-    status: boolean;
-    fees: number;
-    commission: number;
 }
 
 const AddSessionModal: React.FC<AddSessionModalProps> = ({ open, onClose, onAdd }) => {
@@ -44,7 +36,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({ open, onClose, onAdd 
         });
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         const { name, start_date, end_date, fees, commission } = session;
 
         // Validation des champs
@@ -53,16 +45,22 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({ open, onClose, onAdd 
             return;
         }
 
-        onAdd(session);
-        setSession({
-            name: '',
-            start_date: '',
-            end_date: '',
-            fees: 0,
-            commission: 0
-        });
-        setError(null);
-        onClose();
+        try {
+            await createSession(session);
+            setError(null);
+            onAdd(session);
+            setSession({
+                name: '',
+                start_date: '',
+                end_date: '',
+                fees: 0,
+                commission: 0
+            });
+            onClose();
+        } catch (err: any) {
+            console.error('Erreur lors de l\'ajout de la session:', err);
+            setError(err.response?.data?.error || 'Échec de l\'ajout de la session.');
+        }
     };
 
     return (
