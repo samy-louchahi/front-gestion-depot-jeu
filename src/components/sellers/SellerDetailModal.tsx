@@ -17,7 +17,7 @@ import {
     IconButton
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { Seller, Stock, SaleDetail, Balance } from '../../types';
+import { Seller, Stock, SaleDetail, Balance, Game } from '../../types';
 import { getSellerStocks, getSellerSaleDetails, getAllSellerBalances } from '../../services/sellerService';
 import { formatCurrency } from '../../utils/formatCurrency';
 
@@ -44,7 +44,11 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
                     getSellerSaleDetails(seller.seller_id),
                     getAllSellerBalances(seller.seller_id)
                 ]);
-                setStocks(stocksData);
+
+                // Agréger les stocks pour éviter les doublons
+                const aggregatedStocks = aggregateStocks(stocksData);
+                setStocks(aggregatedStocks);
+
                 setSaleDetails(saleDetailsData);
                 setBalances(balancesData);
                 setError(null);
@@ -60,6 +64,28 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
             fetchDetails();
         }
     }, [open, seller]);
+
+    /**
+     * Fonction pour agréger les stocks par jeu unique
+     * @param stocks Liste des stocks récupérés du backend
+     * @returns Liste des stocks agrégés
+     */
+    const aggregateStocks = (stocks: Stock[]): Stock[] => {
+        const grouped = stocks.reduce((acc: { [key: string]: Stock }, stock: Stock) => {
+            // Utiliser game_id si disponible, sinon combiner name et editor pour une clé unique
+            const key = stock.game_id ? stock.game_id.toString() : `${stock.Game?.name}-${stock.Game?.publisher}`;
+
+            if (acc[key]) {
+                acc[key].initial_quantity += stock.initial_quantity;
+                acc[key].current_quantity += stock.current_quantity;
+            } else {
+                acc[key] = { ...stock };
+            }
+            return acc;
+        }, {});
+
+        return Object.values(grouped);
+    };
 
     // Vérifier si toutes les données sont vides
     const isAllDataEmpty = stocks.length === 0 && saleDetails.length === 0 && balances.length === 0;
@@ -141,7 +167,7 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
                                         </TableHead>
                                         <TableBody>
                                             {stocks.map(stock => (
-                                                <TableRow key={stock.stock_id} className="hover:bg-gray-50 transition-colors duration-200">
+                                                <TableRow key={stock.game_id || `${stock.Game?.name}-${stock.Game?.publisher}`} className="hover:bg-gray-50 transition-colors duration-200">
                                                     <TableCell>{stock.Game?.name || 'N/A'}</TableCell>
                                                     <TableCell align="right">{stock.initial_quantity}</TableCell>
                                                     <TableCell align="right">{stock.current_quantity}</TableCell>
@@ -184,6 +210,10 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
                                                                   day: 'numeric'
                                                               })
                                                             : 'N/A'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {/* Afficher les détails de la vente si nécessaire */}
+                                                        {/* Par exemple : Nombre de jeux vendus, montant total, etc. */}
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -236,6 +266,7 @@ const SellerDetailModal: React.FC<SellerDetailModalProps> = ({ open, onClose, se
             </Box>
         </Modal>
     );
-}
+    }
 
-export default SellerDetailModal;
+
+    export default SellerDetailModal;

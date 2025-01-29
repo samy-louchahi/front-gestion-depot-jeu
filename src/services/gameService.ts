@@ -1,5 +1,5 @@
 import api from './api';
-import { Game } from '../types';
+import { Game, Stock } from '../types';
 
 export const getGames = async (): Promise<Game[]> => {
     const response = await api.get('/games');
@@ -23,4 +23,8 @@ export const updateGame = async (id: number, game: Partial<Game>): Promise<Game>
 
 export const deleteGame = async (id: number): Promise<void> => {
     await api.delete(`/games/${id}`);
+};
+export const getGameStocks = async (gameId: number): Promise<Stock[]> => {
+    const response = await api.get(`/games/${gameId}/stocks`);
+    return response.data;
 };

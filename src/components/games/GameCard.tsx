@@ -1,8 +1,11 @@
+// src/components/games/GameCard.tsx
+
 import React from 'react';
-import { Game } from '../../types';
-import { IconButton, Typography } from '@mui/material';
-import UpdateIcon from '@mui/icons-material/Update';
+import { Card, CardContent, Typography, IconButton, CardActions, Button } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import { Game } from '../../types';
 
 interface GameCardProps {
     game: Game;
@@ -13,23 +16,27 @@ interface GameCardProps {
 
 const GameCard: React.FC<GameCardProps> = ({ game, onUpdate, onDelete, onViewDetails }) => {
     return (
-        <li
-            className="border p-4 rounded shadow-md w-full max-w-md cursor-pointer hover:bg-gray-100"
-            onClick={() => onViewDetails(game)}
-        >
-            <div className="flex justify-between items-center">
+        <Card className="shadow-md">
+            <CardContent onClick={() => onViewDetails(game)} style={{ cursor: 'pointer' }}>
                 <Typography variant="h6">{game.name}</Typography>
-                <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
-                    <IconButton onClick={() => onUpdate(game)}>
-                        <UpdateIcon className="text-blue-500" />
-                    </IconButton>
-                    <IconButton onClick={() => onDelete(game.game_id!)}>
-                        <DeleteIcon className="text-red-500" />
-                    </IconButton>
-                </div>
-            </div>
-            <Typography>Éditeur: {game.publisher}</Typography>
-        </li>
+                <Typography color="textSecondary">{game.publisher}</Typography>
+            </CardContent>
+            <CardActions>
+                <IconButton aria-label="edit" onClick={() => onUpdate(game)}>
+                    <EditIcon />
+                </IconButton>
+                <IconButton aria-label="delete" onClick={() => onDelete(game.game_id)}>
+                    <DeleteIcon />
+                </IconButton>
+                <Button
+                    size="small"
+                    startIcon={<VisibilityIcon />}
+                    onClick={() => onViewDetails(game)}
+                >
+                    Détails
+                </Button>
+            </CardActions>
+        </Card>
     );
 };
 

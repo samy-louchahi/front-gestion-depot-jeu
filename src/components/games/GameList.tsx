@@ -8,6 +8,7 @@ import { getGames, deleteGame } from '../../services/gameService';
 import GameForm from './GameForm';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 import GameCard from './GameCard';
+import GameDetailModal from './GameDetailModal'; // Importer le nouveau composant
 
 const GameList: React.FC = () => {
     const [games, setGames] = useState<Game[]>([]);
@@ -116,7 +117,7 @@ const GameList: React.FC = () => {
                         game={game}
                         onUpdate={handleUpdate}
                         onDelete={handleDelete}
-                        onViewDetails={handleViewDetails}
+                        onViewDetails={handleViewDetails} // Passer la fonction pour afficher les détails
                     />
                 ))}
             </ul>
@@ -137,6 +138,15 @@ const GameList: React.FC = () => {
                 onConfirm={confirmDelete}
                 onCancel={cancelDelete}
             />
+
+            {/* Modal pour les Détails du Jeu */}
+            {detailGame && (
+                <GameDetailModal
+                    open={openDetailModal}
+                    onClose={handleDetailModalClose}
+                    game={detailGame}
+                />
+            )}
         </div>
     );
 };
