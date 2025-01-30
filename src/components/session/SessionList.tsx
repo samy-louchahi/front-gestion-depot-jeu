@@ -9,6 +9,7 @@ import SessionCard from './SessionCard';
 import AddSessionModal from './AddSessionModal';
 import UpdateSessionModal from './UpdateSessionModal';
 import ConfirmationDialog from '../common/ConfirmationDialog';
+import SessionDetailModal from './SessionDetailModal';
 
 const SessionList: React.FC = () => {
     const [sessions, setSessions] = useState<Session[]>([]);
@@ -133,6 +134,14 @@ const SessionList: React.FC = () => {
                     </Typography>
                 )}
             </div>
+            {/* Modal Détail de la Session */}
+            {detailSession && (
+                <SessionDetailModal
+                    open={openDetailModal}
+                    onClose={handleDetailModalClose}
+                    session_id={detailSession?.session_id ?? 0}
+                />
+            )}
 
             {/* Add Session Modal */}
             <AddSessionModal

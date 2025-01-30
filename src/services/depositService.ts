@@ -18,7 +18,6 @@ export const createDeposit = async (depositData: {
     games: {
         game_id: number;
         price: number;
-        fees: number;
         quantity: number;
     }[];
 }): Promise<Deposit> => {

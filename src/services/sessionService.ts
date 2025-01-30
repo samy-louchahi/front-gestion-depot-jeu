@@ -1,7 +1,7 @@
 // src/services/sessionService.ts
 
 import api from './api';
-import { Session } from '../types';
+import { Session, Balance } from '../types';
 
 export const getSessions = async (): Promise<Session[]> => {
     const response = await api.get('/sessions');
@@ -25,4 +25,9 @@ export const updateSession = async (id: number, session: Partial<Session>): Prom
 
 export const deleteSession = async (id: number): Promise<void> => {
     await api.delete(`/sessions/${id}`);
+};
+
+export const getGlobalBalanceBySession = async (session_id: number): Promise<Balance> => {
+    const response = await api.get(`/finances/session/${session_id}`);
+    return response.data;
 };

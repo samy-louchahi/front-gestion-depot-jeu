@@ -286,19 +286,6 @@ const AddDepositModal: React.FC<AddDepositModalProps> = ({ open, onClose, onAdd 
                                 </Grid>
                                 <Grid item xs={12} sm={2}>
                                     <TextField
-                                        label="Frais (%)"
-                                        type="number"
-                                        variant="outlined"
-                                        fullWidth
-                                        value={details.fees}
-                                        onChange={(e) =>
-                                            handleGameDetailChange(game_id, 'fees', parseFloat(e.target.value))
-                                        }
-                                        inputProps={{ step: '0.01' }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} sm={2}>
-                                    <TextField
                                         label="Quantité"
                                         type="number"
                                         variant="outlined"
