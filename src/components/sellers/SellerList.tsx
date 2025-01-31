@@ -1,10 +1,5 @@
-// src/components/sellers/SellerList.tsx
-
 import React, { useEffect, useState } from 'react';
-import { Button, IconButton, Typography } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import UpdateIcon from '@mui/icons-material/Update';
+import { Typography } from '@mui/material';
 import { Seller } from '../../types';
 import { getSellers, deleteSeller } from '../../services/sellerService';
 import SellerForm from './SellerForm';
@@ -95,43 +90,37 @@ const SellerList: React.FC = () => {
     }
 
     return (
-        <div className="p-4">
-            <div className="flex flex-col items-center mb-6">
-                <Typography variant="h4" className="mb-4">
+        <div className="container mx-auto p-4">
+            <div className="flex justify-between items-center mb-6">
+                <Typography variant='h4' className="text-3xl font-extrabold text-gray-800">
                     Liste des Vendeurs
                 </Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
+                <button
                     onClick={handleAdd}
-                    className="bg-blue-500 hover:bg-blue-600"
+                    className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-full shadow-lg transition duration-300"
                 >
-                    Ajouter un Vendeur
-                </Button>
+                    + Ajouter un Vendeur
+                </button>
             </div>
             {error && <Typography color="error" className="text-center mb-4">{error}</Typography>}
-            <div className="flex justify-center">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    {sellers.map((seller) => (
-                        <SellerCard
-                            key={seller.seller_id}
-                            seller={seller}
-                            onUpdate={handleUpdate}
-                            onDelete={handleDelete}
-                            onViewDetails={handleViewDetails}
-                        />
-                    ))}
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {sellers.map((seller) => (
+                    <SellerCard
+                        key={seller.seller_id}
+                        seller={seller}
+                        onUpdate={handleUpdate}
+                        onDelete={handleDelete}
+                        onViewDetails={handleViewDetails}
+                    />
+                ))}
             </div>
 
-            {/* Formulaire Ajout/Mise à Jour */}
             <SellerForm
                 open={openForm}
                 onClose={handleFormClose}
                 seller={selectedSeller}
             />
 
-            {/* Dialogue de Confirmation Suppression */}
             <ConfirmationDialog
                 open={openConfirm}
                 title="Confirmer la Suppression"
@@ -140,7 +129,6 @@ const SellerList: React.FC = () => {
                 onCancel={cancelDelete}
             />
 
-            {/* Modal Détail Vendeur */}
             {detailSeller && (
                 <SellerDetailModal
                     open={openDetailModal}

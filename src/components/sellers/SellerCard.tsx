@@ -1,8 +1,6 @@
-// src/components/sellers/SellerCard.tsx
-
 import React from 'react';
 import { Seller } from '../../types';
-import { IconButton, Typography } from '@mui/material';
+import { IconButton } from '@mui/material';
 import UpdateIcon from '@mui/icons-material/Update';
 import DeleteIcon from '@mui/icons-material/Delete';
 
@@ -16,25 +14,17 @@ interface SellerCardProps {
 const SellerCard: React.FC<SellerCardProps> = ({ seller, onUpdate, onDelete, onViewDetails }) => {
     return (
         <div
-            className="bg-white shadow-md rounded-lg p-6 flex flex-col justify-between cursor-pointer hover:shadow-xl transition-shadow duration-300"
+            className="bg-white shadow-lg rounded-lg p-6 border border-gray-300 hover:shadow-xl transition-shadow duration-300 cursor-pointer"
             onClick={() => onViewDetails(seller)}
         >
-            <div>
-                <Typography variant="h6" className="mb-2">
-                    {seller.name}
-                </Typography>
-                <Typography variant="body2" className="text-gray-600">
-                    <strong>Email:</strong> {seller.email}
-                </Typography>
-                <Typography variant="body2" className="text-gray-600">
-                    <strong>Téléphone:</strong> {seller.phone}
-                </Typography>
-            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-1">{seller.name}</h3>
+            <p className="text-gray-600"><strong>Email:</strong> {seller.email}</p>
+            <p className="text-gray-600"><strong>Téléphone:</strong> {seller.phone}</p>
             <div className="mt-4 flex justify-end space-x-2">
                 <IconButton
                     aria-label="update"
                     onClick={(e) => {
-                        e.stopPropagation(); // Empêche l'ouverture de la modal de détail
+                        e.stopPropagation();
                         onUpdate(seller);
                     }}
                 >
@@ -43,7 +33,7 @@ const SellerCard: React.FC<SellerCardProps> = ({ seller, onUpdate, onDelete, onV
                 <IconButton
                     aria-label="delete"
                     onClick={(e) => {
-                        e.stopPropagation(); // Empêche l'ouverture de la modal de détail
+                        e.stopPropagation();
                         onDelete(seller.seller_id);
                     }}
                 >

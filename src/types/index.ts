@@ -57,6 +57,7 @@ export interface SaleDetail {
     quantity: number;
     Sale?: Sale;
     DepositGame?: DepositGame;
+    Seller?: Seller;
 }
 
 export interface SalesOperation {

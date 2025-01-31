@@ -1,6 +1,6 @@
 import React from 'react';
 import { Buyer } from '../../types';
-import { IconButton, Typography } from '@mui/material';
+import { IconButton } from '@mui/material';
 import UpdateIcon from '@mui/icons-material/Update';
 import DeleteIcon from '@mui/icons-material/Delete';
 
@@ -8,18 +8,14 @@ interface BuyerCardProps {
     buyer: Buyer;
     onUpdate: (buyer: Buyer) => void;
     onDelete: (buyer_id: number) => void;
-    onViewDetails: (buyer: Buyer) => void;
 }
 
-const BuyerCard: React.FC<BuyerCardProps> = ({ buyer, onUpdate, onDelete, onViewDetails }) => {
+const BuyerCard: React.FC<BuyerCardProps> = ({ buyer, onUpdate, onDelete }) => {
     return (
-        <li
-            className="border p-4 rounded shadow-md w-full max-w-md cursor-pointer hover:bg-gray-100"
-            onClick={() => onViewDetails(buyer)}
-        >
-            <div className="flex justify-between items-center">
-                <Typography variant="h6">{buyer.name}</Typography>
-                <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6 rounded-lg shadow-md bg-white border border-gray-300">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-2xl font-semibold text-gray-800">{buyer.name}</h3>
+                <div className="flex space-x-2">
                     <IconButton onClick={() => onUpdate(buyer)}>
                         <UpdateIcon className="text-blue-500" />
                     </IconButton>
@@ -28,10 +24,10 @@ const BuyerCard: React.FC<BuyerCardProps> = ({ buyer, onUpdate, onDelete, onView
                     </IconButton>
                 </div>
             </div>
-            <Typography>Email: {buyer.email}</Typography>
-            <Typography>Téléphone: {buyer.phone}</Typography>
-            <Typography>Addresse: {buyer.address}</Typography>
-        </li>
+            <p className="text-gray-600"><strong>Email:</strong> {buyer.email}</p>
+            <p className="text-gray-600"><strong>Téléphone:</strong> {buyer.phone}</p>
+            <p className="text-gray-600"><strong>Adresse:</strong> {buyer.address}</p>
+        </div>
     );
 };
 

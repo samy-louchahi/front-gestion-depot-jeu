@@ -1,8 +1,5 @@
-// src/components/sessions/SessionList.tsx
-
 import React, { useEffect, useState } from 'react';
-import { Button, Typography } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { Typography } from '@mui/material';
 import { Session } from '../../types';
 import { getSessions, deleteSession } from '../../services/sessionService';
 import SessionCard from './SessionCard';
@@ -99,25 +96,23 @@ const SessionList: React.FC = () => {
 
     return (
         <div className="container mx-auto p-4">
-            <div className="flex flex-col items-center mb-6">
-                <Typography variant="h4" className="font-bold mb-4">
-                    Liste des Sessions
-                </Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
+            <div className="flex justify-between items-center mb-6">
+                {/* Titre avec plus de style */}
+                <Typography variant='h4'className="text-3xl font-extrabold text-gray-800">Liste des Sessions</Typography>
+                {/* Bouton amélioré */}
+                <button
                     onClick={handleAdd}
-                    className="bg-blue-500 hover:bg-blue-600"
+                    className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-full shadow-lg transition duration-300"
                 >
-                    Créer une Session
-                </Button>
+                    + Créer une Session
+                </button>
             </div>
             {error && (
                 <Typography color="error" className="text-center mb-4">
                     {error}
                 </Typography>
             )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {sessions.length > 0 ? (
                     sessions.map(session => (
                         <SessionCard
@@ -134,7 +129,6 @@ const SessionList: React.FC = () => {
                     </Typography>
                 )}
             </div>
-            {/* Modal Détail de la Session */}
             {detailSession && (
                 <SessionDetailModal
                     open={openDetailModal}
@@ -142,19 +136,14 @@ const SessionList: React.FC = () => {
                     session_id={detailSession?.session_id ?? 0}
                 />
             )}
-
-            {/* Add Session Modal */}
             <AddSessionModal
                 open={openAdd}
                 onClose={handleFormClose}
                 onAdd={(newSession) => {
-                    // Mettre à jour l'état local
                     setSessions([...sessions, { ...newSession, status: false, session_id: Date.now() }]);
                     handleFormClose();
                 }}
             />
-
-            {/* Update Session Modal */}
             <UpdateSessionModal
                 open={openUpdate}
                 onClose={handleFormClose}
@@ -164,8 +153,6 @@ const SessionList: React.FC = () => {
                 }}
                 session={currentSession}
             />
-
-            {/* Dialogue de Confirmation Suppression */}
             <ConfirmationDialog
                 open={openConfirm}
                 title="Confirmer la Suppression"
@@ -173,11 +160,8 @@ const SessionList: React.FC = () => {
                 onConfirm={confirmDelete}
                 onCancel={cancelDelete}
             />
-
-            {/* Modal Détail Session (Optionnel) */}
-            
         </div>
     );
-}
+};
 
 export default SessionList;

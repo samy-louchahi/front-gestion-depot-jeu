@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Typography } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { Typography } from '@mui/material';
 import { Buyer } from '../../types';
 import { getBuyers, deleteBuyer } from '../../services/buyerService';
 import BuyerForm from './BuyerForm';
@@ -15,8 +14,6 @@ const BuyerList: React.FC = () => {
     const [selectedBuyer, setSelectedBuyer] = useState<Buyer | null>(null);
     const [openConfirm, setOpenConfirm] = useState<boolean>(false);
     const [buyerToDelete, setBuyerToDelete] = useState<number | null>(null);
-    const [openDetailModal, setOpenDetailModal] = useState<boolean>(false);
-    const [detailBuyer, setDetailBuyer] = useState<Buyer | null>(null);
 
     const fetchBuyers = async () => {
         setLoading(true);
@@ -49,7 +46,7 @@ const BuyerList: React.FC = () => {
             setError(null);
         } catch (err: any) {
             console.error(err);
-            setError('Erreur lors de la suppression du buyer.');
+            setError('Erreur lors de la suppression de l\'acheteur.');
         } finally {
             setOpenConfirm(false);
             setBuyerToDelete(null);
@@ -77,49 +74,41 @@ const BuyerList: React.FC = () => {
         fetchBuyers(); // Rafraîchir la liste après ajout/mise à jour
     };
 
-    const handleViewDetails = (buyer: Buyer) => {
-        setDetailBuyer(buyer);
-        setOpenDetailModal(true);
-    };
-
-    const handleDetailModalClose = () => {
-        setOpenDetailModal(false);
-        setDetailBuyer(null);
-    };
-
     if (loading) {
         return <Typography className="text-center mt-10">Chargement...</Typography>;
     }
 
     return (
-        <div className="p-4">
-            <div className="flex flex-col items-center mb-6">
-                <Typography variant="h4" className="mb-4">
+        <div className="container mx-auto p-4">
+            <div className="flex justify-between items-center mb-6">
+                <Typography variant='h4' className="text-3xl font-extrabold text-gray-800">
                     Liste des Acheteurs
                 </Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
+                <button
                     onClick={handleAdd}
-                    className="bg-blue-500 hover:bg-blue-600"
+                    className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-full shadow-lg transition duration-300"
                 >
-                    Ajouter un Acheteur
-                </Button>
+                    + Ajouter un Acheteur
+                </button>
             </div>
             {error && <Typography color="error" className="text-center mb-4">{error}</Typography>}
-            <ul className="space-y-4 w-full max-w-md mx-auto">
-                {buyers.map((buyer) => (
-                    <BuyerCard
-                        key={buyer.buyer_id}
-                        buyer={buyer}
-                        onUpdate={handleUpdate}
-                        onDelete={handleDelete}
-                        onViewDetails={handleViewDetails}
-                    />
-                ))}
-            </ul>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {buyers.length > 0 ? (
+                    buyers.map((buyer) => (
+                        <BuyerCard
+                            key={buyer.buyer_id}
+                            buyer={buyer}
+                            onUpdate={handleUpdate}
+                            onDelete={handleDelete}
+                        />
+                    ))
+                ) : (
+                    <Typography className="text-center w-full" variant="h6">
+                        Aucun acheteur disponible.
+                    </Typography>
+                )}
+            </div>
 
-            {/* Formulaire Ajout/Mise à Jour */}
             <BuyerForm
                 open={openForm}
                 onClose={handleFormClose}
@@ -127,7 +116,6 @@ const BuyerList: React.FC = () => {
                 onSuccess={fetchBuyers}
             />
 
-            {/* Dialogue de Confirmation Suppression */}
             <ConfirmationDialog
                 open={openConfirm}
                 title="Confirmer la Suppression"
