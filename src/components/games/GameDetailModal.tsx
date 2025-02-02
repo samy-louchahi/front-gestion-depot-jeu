@@ -2,212 +2,257 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-    Modal,
-    Box,
-    Typography,
-    Divider,
-    CircularProgress,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    IconButton
+  Modal,
+  Box,
+  Typography,
+  Divider,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  CardMedia,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Game, Stock, Seller } from '../../types';
 import { getGameStocks } from '../../services/gameService';
 
 interface GameDetailModalProps {
-    open: boolean;
-    onClose: () => void;
-    game: Game;
+  open: boolean;
+  onClose: () => void;
+  game: Game;
 }
 
 const GameDetailModal: React.FC<GameDetailModalProps> = ({ open, onClose, game }) => {
-    const [stocks, setStocks] = useState<Stock[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
-    const [totalInitialQuantity, setTotalInitialQuantity] = useState<number>(0);
-    const [totalCurrentQuantity, setTotalCurrentQuantity] = useState<number>(0);
-    const [sellerStocks, setSellerStocks] = useState<{ seller: Seller; initial_quantity: number; current_quantity: number }[]>([]);
+  const [stocks, setStocks] = useState<Stock[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalInitialQuantity, setTotalInitialQuantity] = useState<number>(0);
+  const [totalCurrentQuantity, setTotalCurrentQuantity] = useState<number>(0);
+  const [sellerStocks, setSellerStocks] = useState<
+    { seller: Seller; initial_quantity: number; current_quantity: number }[]
+  >([]);
 
-    useEffect(() => {
-        const fetchStocks = async () => {
-            setLoading(true);
-            try {
-                const data = await getGameStocks(game.game_id);
-                const aggregatedStocks = aggregateStocks(data);
-                setStocks(aggregatedStocks);
+  useEffect(() => {
+    const fetchStocks = async () => {
+      setLoading(true);
+      try {
+        const data = await getGameStocks(game.game_id);
+        const aggregatedStocks = aggregateStocks(data);
+        setStocks(aggregatedStocks);
 
-                // Calculer les quantités totales du jeu
-                const totalInitial: number = aggregatedStocks.reduce((acc: number, stock: Stock) => acc + stock.initial_quantity, 0);
-                const totalCurrent: number = aggregatedStocks.reduce((acc: number, stock: Stock) => acc + stock.current_quantity, 0);
+        // Calcul des quantités totales du jeu
+        const totalInitial: number = aggregatedStocks.reduce(
+          (acc: number, stock: Stock) => acc + stock.initial_quantity,
+          0
+        );
+        const totalCurrent: number = aggregatedStocks.reduce(
+          (acc: number, stock: Stock) => acc + stock.current_quantity,
+          0
+        );
 
-                setTotalInitialQuantity(totalInitial);
-                setTotalCurrentQuantity(totalCurrent);
-                setSellerStocks(aggregateSellers(aggregatedStocks));
+        setTotalInitialQuantity(totalInitial);
+        setTotalCurrentQuantity(totalCurrent);
+        setSellerStocks(aggregateSellers(aggregatedStocks));
+        setError(null);
+      } catch (err: any) {
+        console.error(err);
+        setError('Erreur lors de la récupération des stocks du jeu.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-                setError(null);
-            } catch (err: any) {
-                console.error(err);
-                setError('Erreur lors de la récupération des stocks du jeu.');
-            } finally {
-                setLoading(false);
-            }
-        };
+    if (open) {
+      fetchStocks();
+    }
+  }, [open, game]);
 
-        if (open) {
-            fetchStocks();
+  /**
+   * Agréger les stocks (personnalisez cette fonction selon vos besoins)
+   */
+  const aggregateStocks = (stocks: Stock[]): Stock[] => {
+    // Implémentez ici votre logique d'agrégation si nécessaire
+    return stocks;
+  };
+
+  /**
+   * Agréger les stocks par vendeur
+   */
+  const aggregateSellers = (
+    stocks: Stock[]
+  ): { seller: Seller; initial_quantity: number; current_quantity: number }[] => {
+    const sellerMap: { [key: number]: { seller: Seller; initial_quantity: number; current_quantity: number } } = {};
+
+    stocks.forEach((stock) => {
+      if (stock.Seller) {
+        const sellerId = stock.seller_id!;
+        if (!sellerMap[sellerId]) {
+          sellerMap[sellerId] = {
+            seller: stock.Seller,
+            initial_quantity: 0,
+            current_quantity: 0,
+          };
         }
-    }, [open, game]);
+        sellerMap[sellerId].initial_quantity += stock.initial_quantity;
+        sellerMap[sellerId].current_quantity += stock.current_quantity;
+      }
+    });
 
-    /**
-     * Agréger les stocks
-     * @param stocks Liste des stocks récupérés du backend
-     * @returns Liste des stocks agrégés
-     */
-    const aggregateStocks = (stocks: Stock[]): Stock[] => {
-        // Implémentez ici la logique pour agréger les stocks
-        return stocks;
-    };
+    return Object.values(sellerMap);
+  };
 
-    /**
-     * Agréger les stocks par vendeur
-     * @param stocks Liste des stocks récupérés du backend
-     * @returns Liste des stocks agrégés par vendeur
-     */
-    const aggregateSellers = (stocks: Stock[]): { seller: Seller; initial_quantity: number; current_quantity: number }[] => {
-        const sellerMap: { [key: number]: { seller: Seller; initial_quantity: number; current_quantity: number } } = {};
+  // Définir la source de l'image (si aucune image n'est fournie, utiliser l'image par défaut)
+  const imageSrc = game.picture ? game.picture : '/affiche_FDJ_montpellier.jpg';
 
-        stocks.forEach(stock => {
-            if (stock.Seller) {
-                const sellerId = stock.seller_id!;
-                if (!sellerMap[sellerId]) {
-                    sellerMap[sellerId] = {
-                        seller: stock.Seller,
-                        initial_quantity: 0,
-                        current_quantity: 0
-                    };
-                }
-                sellerMap[sellerId].initial_quantity += stock.initial_quantity;
-                sellerMap[sellerId].current_quantity += stock.current_quantity;
-            }
-        });
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      aria-labelledby="game-detail-title"
+      aria-describedby="game-detail-description"
+    >
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          bgcolor: 'background.paper',
+          p: 4,
+          borderRadius: 2,
+          boxShadow: 24,
+          maxHeight: '90vh',
+          width: '90%',
+          maxWidth: 800,
+          overflowY: 'auto',
+        }}
+      >
+        {/* En-tête avec titre et bouton de fermeture */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h5" id="game-detail-title">
+            Détails du Jeu: {game.name}
+          </Typography>
+          <IconButton onClick={onClose} aria-label="close" size="large">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <Divider sx={{ mb: 2 }} />
 
-        return Object.values(sellerMap);
-    };
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Typography color="error" align="center" sx={{ mt: 4 }}>
+            {error}
+          </Typography>
+        ) : (
+          <Box sx={{ mt: 2 }}>
+            {/* Affichage de l'image du jeu */}
+            <CardMedia
+              component="img"
+              image={imageSrc}
+              alt={game.name}
+              onError={(e: any) => {
+                e.target.onerror = null;
+                e.target.src = '/affiche_FDJ_montpellier.jpg';
+              }}
+              sx={{
+                width: '100%',
+                height: 300,
+                objectFit: 'cover',
+                borderRadius: 2,
+                mb: 3,
+              }}
+            />
 
-    return (
-        <Modal
-            open={open}
-            onClose={onClose}
-            aria-labelledby="game-detail-title"
-            aria-describedby="game-detail-description"
-        >
-            <Box
-                className="bg-white p-6 rounded-lg w-full max-w-5xl mx-auto mt-10 overflow-auto shadow-lg"
-                sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    maxHeight: '90vh',
-                    width: '90%',
-                }}
-            >
-                {/* Header avec Titre et Bouton de Fermeture */}
-                <Box className="flex justify-between items-center mb-4">
-                    <Typography variant="h5" id="game-detail-title">
-                        Détails du Jeu: {game.name}
-                    </Typography>
-                    <IconButton onClick={onClose} aria-label="close" size="large">
-                        <CloseIcon />
-                    </IconButton>
-                </Box>
-                <Divider />
-
-                {/* Contenu Principal */}
-                {loading ? (
-                    <Box className="flex justify-center items-center h-64">
-                        <CircularProgress />
-                    </Box>
-                ) : error ? (
-                    <Typography color="error" className="text-center mt-10">
-                        {error}
-                    </Typography>
-                ) : (
-                    <Box className="mt-4 space-y-8">
-                        {/* Informations Générales */}
-                        <Box>
-                            <Typography variant="h6" className="mb-2 text-blue-600">
-                                Informations Générales
-                            </Typography>
-                            <Box className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <Typography variant="body1">
-                                    <strong>Éditeur :</strong> {game.publisher}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        {/* Stocks Totaux */}
-                        <Box>
-                            <Typography variant="h6" className="mb-2 text-blue-600">
-                                Stocks Totaux
-                            </Typography>
-                            <TableContainer component={Paper} className="rounded-lg">
-                                <Table>
-                                    <TableHead>
-                                        <TableRow className="bg-gray-100">
-                                            <TableCell><strong>Quantité Initiale Totale</strong></TableCell>
-                                            <TableCell align="right"><strong>Quantité Actuelle Totale</strong></TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        <TableRow className="hover:bg-gray-50 transition-colors duration-200">
-                                            <TableCell>{totalInitialQuantity}</TableCell>
-                                            <TableCell align="right">{totalCurrentQuantity}</TableCell>
-                                        </TableRow>
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        </Box>
-
-                        {/* Liste des Stocks par Vendeur */}
-                        {sellerStocks.length > 0 && (
-                            <Box>
-                                <Typography variant="h6" className="mb-2 text-blue-600">
-                                    Stocks par Vendeur
-                                </Typography>
-                                <TableContainer component={Paper} className="rounded-lg">
-                                    <Table>
-                                        <TableHead>
-                                            <TableRow className="bg-gray-100">
-                                                <TableCell><strong>Vendeur</strong></TableCell>
-                                                <TableCell align="right"><strong>Quantité Initiale</strong></TableCell>
-                                                <TableCell align="right"><strong>Quantité Actuelle</strong></TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {sellerStocks.map(sellerStock => (
-                                                <TableRow key={sellerStock.seller.seller_id} className="hover:bg-gray-50 transition-colors duration-200">
-                                                    <TableCell>{sellerStock.seller.name}</TableCell>
-                                                    <TableCell align="right">{sellerStock.initial_quantity}</TableCell>
-                                                    <TableCell align="right">{sellerStock.current_quantity}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            </Box>
-                        )}
-                    </Box>
-                )}
+            {/* Section Informations Générales */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 1, color: 'primary.main' }}>
+                Informations Générales
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                <strong>Éditeur :</strong> {game.publisher}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Description :</strong> {game.description ? game.description : 'Aucune description disponible.'}
+              </Typography>
             </Box>
-        </Modal>
-    );
+
+            {/* Section Stocks Totaux */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 1, color: 'primary.main' }}>
+                Stocks Totaux
+              </Typography>
+              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: 'grey.200' }}>
+                      <TableCell>
+                        <strong>Quantité Initiale Totale</strong>
+                      </TableCell>
+                      <TableCell align="right">
+                        <strong>Quantité Actuelle Totale</strong>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow sx={{ '&:hover': { backgroundColor: 'grey.100' } }}>
+                      <TableCell>{totalInitialQuantity}</TableCell>
+                      <TableCell align="right">{totalCurrentQuantity}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+
+            {/* Section Stocks par Vendeur */}
+            {sellerStocks.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 1, color: 'primary.main' }}>
+                  Stocks par Vendeur
+                </Typography>
+                <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: 'grey.200' }}>
+                        <TableCell>
+                          <strong>Vendeur</strong>
+                        </TableCell>
+                        <TableCell align="right">
+                          <strong>Quantité Initiale</strong>
+                        </TableCell>
+                        <TableCell align="right">
+                          <strong>Quantité Actuelle</strong>
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {sellerStocks.map((sellerStock) => (
+                        <TableRow
+                          key={sellerStock.seller.seller_id}
+                          sx={{ '&:hover': { backgroundColor: 'grey.100' } }}
+                        >
+                          <TableCell>{sellerStock.seller.name}</TableCell>
+                          <TableCell align="right">{sellerStock.initial_quantity}</TableCell>
+                          <TableCell align="right">{sellerStock.current_quantity}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            )}
+          </Box>
+        )}
+      </Box>
+    </Modal>
+  );
 };
 
 export default GameDetailModal;

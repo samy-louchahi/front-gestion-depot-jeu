@@ -35,4 +35,33 @@ api.interceptors.response.use(
     }
 );
 
-export default api;
+
+const apiCsv = axios.create({
+    baseURL: 'http://localhost:3000/api',
+});
+
+// Intercepteur pour inclure le token et définir le Content-Type
+apiCsv.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+        }
+        // Définir le Content-Type pour le multipart/form-data
+        config.headers['Content-Type'] = 'multipart/form-data';
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+apiCsv.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
+export { apiCsv, api };

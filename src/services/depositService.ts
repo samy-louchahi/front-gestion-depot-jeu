@@ -1,6 +1,6 @@
 // src/services/depositService.ts
 
-import api from './api';
+import {api} from './api';
 import { Deposit, DepositGame, Game, Session, Seller } from '../types';
 
 // Configurer une instance axios avec une baseURL

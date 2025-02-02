@@ -17,6 +17,8 @@ export interface Game {
     game_id: number;
     name: string;
     publisher: string;
+    description: string;
+    picture: string;
 }
 
 export interface DepositGame {

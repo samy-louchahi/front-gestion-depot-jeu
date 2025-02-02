@@ -1,4 +1,4 @@
-import api from './api';
+import {api} from './api';
 import { Buyer } from '../types';
 
 export const getBuyers = async (): Promise<Buyer[]> => {

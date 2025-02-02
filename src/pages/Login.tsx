@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
-import api from '../services/api';
+import {api} from '../services/api';
 
 const Login: React.FC = () => {
     const [role, setRole] = useState<'admin' | 'gestionnaire'>('admin');

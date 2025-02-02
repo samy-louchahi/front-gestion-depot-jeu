@@ -1,6 +1,6 @@
 // src/services/saleService.ts
 
-import api from './api';
+import {api} from './api';
 import { Sale, SalesOperation, SaleDetail } from '../types';
 
 // Configurer une instance Axios avec une baseURL

@@ -1,6 +1,6 @@
 // src/services/sessionService.ts
 
-import api from './api';
+import {api} from './api';
 import { Session, Balance } from '../types';
 
 export const getSessions = async (): Promise<Session[]> => {

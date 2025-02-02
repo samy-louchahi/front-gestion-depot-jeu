@@ -1,5 +1,7 @@
-import api from './api';
+import {api, apiCsv} from './api';
 import { Game, Stock } from '../types';
+import { AxiosResponse } from 'axios';
+
 
 export const getGames = async (): Promise<Game[]> => {
     const response = await api.get('/games');
@@ -11,13 +13,15 @@ export const getGameById = async (id: number): Promise<Game> => {
     return response.data;
 };
 
-export const createGame = async (game: Omit<Game, 'game_id'>): Promise<Game> => {
-    const response = await api.post('/games', game);
+// Remplacez vos fonctions createGame et updateGame par :
+
+export const createGame = async (game: FormData): Promise<Game> => {
+    const response = await apiCsv.post('/games', game);
     return response.data;
 };
 
-export const updateGame = async (id: number, game: Partial<Game>): Promise<Game> => {
-    const response = await api.put(`/games/${id}`, game);
+export const updateGame = async (id: number, game: FormData): Promise<Game> => {
+    const response = await apiCsv.put(`/games/${id}`, game);
     return response.data;
 };
 
@@ -26,5 +30,11 @@ export const deleteGame = async (id: number): Promise<void> => {
 };
 export const getGameStocks = async (gameId: number): Promise<Stock[]> => {
     const response = await api.get(`/games/${gameId}/stocks`);
+    return response.data;
+};
+export const importGames = async (formData: FormData): Promise<void> => {
+
+    const response = await apiCsv.post('/csvImport/import', formData);
+
     return response.data;
 };

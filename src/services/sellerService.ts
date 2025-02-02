@@ -1,6 +1,6 @@
 // src/services/sellerService.ts
 
-import api from './api';
+import {api} from './api';
 import { Seller, Stock, SaleDetail, Balance, Session } from '../types';
 import pLimit from 'p-limit';
 

@@ -1,5 +1,5 @@
 // services/stockService.ts
-import api from './api';
+import {api} from './api';
 import { Stock } from '../types';
 
 export const createOrUpdateStock = async (stockData: {
