@@ -1,352 +1,272 @@
-// src/components/deposits/AddDepositModal.tsx
-
 import React, { useState, useEffect } from 'react';
 import {
-    Modal,
-    Box,
-    TextField,
-    Typography,
-    Button,
-    MenuItem,
-    FormControl,
-    InputLabel,
-    Select,
-    Checkbox,
-    ListItemText,
-    OutlinedInput,
-    IconButton,
-    Grid,
-    SelectChangeEvent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Typography,
+  Box,
+  OutlinedInput,
+  SelectChangeEvent,
 } from '@mui/material';
-import { RemoveCircleOutline } from '@mui/icons-material';
-import { Deposit, Seller, Session, Game, Stock } from '../../types';
+import DepositGameEntryCard, { DepositGameEntry } from './DepositGameEntryCard';
+import { AddCircleOutline } from '@mui/icons-material';
+import { Deposit, Seller, Session, Game } from '../../types';
 import { createDeposit, getActiveSessions, getSellers, getGames } from '../../services/depositService';
 import { createOrUpdateStock } from '../../services/stockService';
 
 interface AddDepositModalProps {
-    open: boolean;
-    onClose: () => void;
-    onAdd: (deposit: Deposit) => void;
+  open: boolean;
+  onClose: () => void;
+  onAdd: (deposit: Deposit) => void;
 }
 
 const AddDepositModal: React.FC<AddDepositModalProps> = ({ open, onClose, onAdd }) => {
-    const [sessions, setSessions] = useState<Session[]>([]);
-    const [sellers, setSellers] = useState<Seller[]>([]);
-    const [games, setGames] = useState<Game[]>([]);
-    const [selectedSession, setSelectedSession] = useState<number | string>('');
-    const [selectedSeller, setSelectedSeller] = useState<number | string>('');
-    const [selectedGames, setSelectedGames] = useState<number[]>([]);
-    const [gameDetails, setGameDetails] = useState<Record<number, { price: number; fees: number; quantity: number }>>({});
-    const [depositDate, setDepositDate] = useState<string>(new Date().toISOString().split('T')[0]);
-    const [discountFees, setDiscountFees] = useState<number>(0);
-    const [error, setError] = useState<string | null>(null);
+  // Informations communes
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
+  const [selectedSession, setSelectedSession] = useState<number | string>('');
+  const [selectedSeller, setSelectedSeller] = useState<number | string>('');
+  const [depositDate, setDepositDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [discountFees, setDiscountFees] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (open) {
-            // Fetch active sessions, sellers, and games
-            const fetchData = async () => {
-                try {
-                    const [sessionsData, sellersData, gamesData] = await Promise.all([
-                        getActiveSessions(),
-                        getSellers(),
-                        getGames(),
-                    ]);
-                    setSessions(sessionsData);
-                    setSellers(sellersData);
-                    setGames(gamesData);
-                } catch (err) {
-                    console.error('Error fetching data:', err);
-                    setError('Erreur lors de la récupération des données.');
-                }
-            };
-            fetchData();
-        }
-    }, [open]);
+  // Liste des articles du dépôt
+  const [depositItems, setDepositItems] = useState<DepositGameEntry[]>([]);
+  const [nextItemId, setNextItemId] = useState<number>(1);
 
-    const handleSessionChange = (event: SelectChangeEvent<string | number>) => {
-        setSelectedSession(event.target.value as number);
-    };
-
-    const handleSellerChange = (event: SelectChangeEvent<string | number>) => {
-        setSelectedSeller(event.target.value as number);
-    };
-
-    const handleGameSelectChange = (event: SelectChangeEvent<number[]>) => {
-        const value = event.target.value as number[];
-        setSelectedGames(value);
-
-        // Ajouter des détails pour les nouveaux jeux sélectionnés
-        const newGameDetails: Record<number, { price: number; fees: number; quantity: number }> = { ...gameDetails };
-        value.forEach((game_id) => {
-            if (!newGameDetails[game_id]) {
-                newGameDetails[game_id] = { price: 0, fees: 0, quantity: 1 };
-            }
-        });
-
-        // Supprimer les détails des jeux qui ne sont plus sélectionnés
-        Object.keys(newGameDetails).forEach((key) => {
-            if (!value.includes(Number(key))) {
-                delete newGameDetails[Number(key)];
-            }
-        });
-
-        setGameDetails(newGameDetails);
-    };
-
-    const handleGameDetailChange = (
-        game_id: number,
-        field: keyof { price: number; fees: number; quantity: number },
-        value: number
-    ) => {
-        setGameDetails((prev) => ({
-            ...prev,
-            [game_id]: {
-                ...prev[game_id],
-                [field]: value,
-            },
-        }));
-    };
-
-    const handleSubmit = async () => {
-        // Validation
-        if (!selectedSession || !selectedSeller || selectedGames.length === 0) {
-            setError('Veuillez sélectionner une session, un vendeur et au moins un jeu.');
-            return;
-        }
-
-        // Préparer les données du DepositGame
-        const depositData = {
-            seller_id: Number(selectedSeller),
-            session_id: Number(selectedSession),
-            deposit_date: depositDate,
-            discount_fees: discountFees,
-            games: selectedGames.map((game_id) => ({
-                game_id,
-                price: gameDetails[game_id].price,
-                fees: gameDetails[game_id].fees,
-                quantity: gameDetails[game_id].quantity,
-            })),
-        };
-
+  useEffect(() => {
+    if (open) {
+      const fetchData = async () => {
         try {
-            // 1. Créer le DepositGame
-            const newDeposit = await createDeposit(depositData);
-
-            // 2. Créer les Stocks associés
-            const stockPromises = depositData.games.map((game) => {
-                return createOrUpdateStock({
-                    session_id: depositData.session_id,
-                    seller_id: depositData.seller_id,
-                    game_id: game.game_id,
-                    initial_quantity: game.quantity,
-                    current_quantity: game.quantity,
-                });
-            });
-
-            // Attendre que tous les Stocks soient créés
-            const stocks = await Promise.all(stockPromises);
-
-            // 3. Mettre à jour l'interface utilisateur
-            onAdd(newDeposit);
-            
-            // 4. Réinitialiser le formulaire
-            setSelectedSession('');
-            setSelectedSeller('');
-            setSelectedGames([]);
-            setGameDetails({});
-            setDepositDate(new Date().toISOString().split('T')[0]);
-            setDiscountFees(0);
-            setError(null);
-            onClose();
-        } catch (err: any) {
-            console.error('Erreur lors de la création du dépôt ou des stocks:', err);
-            if (err.response && err.response.status === 404) {
-                setError('Endpoint de création des stocks non trouvé. Veuillez vérifier la configuration du backend.');
-            } else {
-                setError('Échec de la création du dépôt ou des stocks.');
-            }
+          const [sessionsData, sellersData, gamesData] = await Promise.all([
+            getActiveSessions(),
+            getSellers(),
+            getGames(),
+          ]);
+          setSessions(sessionsData);
+          setSellers(sellersData);
+          setGames(gamesData);
+        } catch (err) {
+          console.error('Erreur lors de la récupération des données :', err);
+          setError('Erreur lors de la récupération des données.');
         }
+      };
+      fetchData();
+    }
+  }, [open]);
+
+  const handleSessionChange = (e: SelectChangeEvent<string | number>) => {
+    setSelectedSession(e.target.value as number);
+  };
+
+  const handleSellerChange = (e: SelectChangeEvent<string | number>) => {
+    setSelectedSeller(e.target.value as number);
+  };
+
+  // Ajouter un nouvel article vide dans le panier
+  const addDepositItem = () => {
+    const newItem: DepositGameEntry = {
+      id: nextItemId,
+      game_id: null,
+      exemplaires: { "0": { price: 0, state: "neuf" } },
     };
+    setDepositItems([...depositItems, newItem]);
+    setNextItemId(nextItemId + 1);
+  };
 
-    const handleCloseModal = () => {
-        // Réinitialiser le formulaire lors de la fermeture
-        setSelectedSession('');
-        setSelectedSeller('');
-        setSelectedGames([]);
-        setGameDetails({});
-        setDepositDate(new Date().toISOString().split('T')[0]);
-        setDiscountFees(0);
-        setError(null);
-        onClose();
+  // Supprimer un article du panier
+  const removeDepositItem = (id: number) => {
+    setDepositItems(depositItems.filter(item => item.id !== id));
+  };
+
+  // Mettre à jour un champ d'un article (game_id ou fees)
+  const updateDepositItem = (
+    id: number,
+    field: keyof Omit<DepositGameEntry, 'id' | 'exemplaires'>,
+    value: any
+  ) => {
+    setDepositItems(depositItems.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  // Mettre à jour un exemplaire pour un article
+  const updateExemplaire = (
+    id: number,
+    index: number,
+    field: 'price' | 'state',
+    value: any
+  ) => {
+    setDepositItems(depositItems.map(item => {
+      if (item.id === id) {
+        const newExemplaires = { ...item.exemplaires, [index]: { ...item.exemplaires[index.toString()], [field]: value } };
+        return { ...item, exemplaires: newExemplaires };
+      }
+      return item;
+    }));
+  };
+
+  // Ajouter un exemplaire à un article
+  const addExemplaireToItem = (id: number) => {
+    setDepositItems(depositItems.map(item => {
+      if (item.id === id) {
+        const newIndex = Object.keys(item.exemplaires).length;
+        return { ...item, exemplaires: { ...item.exemplaires, [newIndex]: { price: 0, state: "neuf" } } };
+      }
+      return item;
+    }));
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedSession || !selectedSeller) {
+      setError("Veuillez sélectionner une session et un vendeur.");
+      return;
+    }
+    if (depositItems.length === 0) {
+      setError("Veuillez ajouter au moins un jeu à déposer.");
+      return;
+    }
+    for (const item of depositItems) {
+      if (item.game_id === null) {
+        setError("Veuillez sélectionner un jeu pour chaque article.");
+        return;
+      }
+      if (Object.keys(item.exemplaires).length === 0) {
+        setError("Chaque article doit comporter au moins un exemplaire avec état et prix.");
+        return;
+      }
+    }
+  
+    const gamesData = depositItems.map(item => ({
+      game_id: item.game_id as number,
+      quantity: Object.keys(item.exemplaires).length,
+      exemplaires: item.exemplaires,
+    }));
+  
+    const depositData = {
+      seller_id: Number(selectedSeller),
+      session_id: Number(selectedSession),
+      deposit_date: depositDate,
+      discount_fees: discountFees,
+      games: gamesData,
     };
+  
+    try {
+      const newDeposit = await createDeposit(depositData);
+      const stockPromises = gamesData.map(game =>
+        createOrUpdateStock({
+          session_id: depositData.session_id,
+          seller_id: depositData.seller_id,
+          game_id: game.game_id,
+          initial_quantity: game.quantity,
+          current_quantity: game.quantity,
+        })
+      );
+      await Promise.all(stockPromises);
+      onAdd(newDeposit);
+      setSelectedSession('');
+      setSelectedSeller('');
+      setDepositItems([]);
+      setDepositDate(new Date().toISOString().split('T')[0]);
+      setDiscountFees(0);
+      setError(null);
+      onClose();
+    } catch (err: any) {
+      console.error("Erreur lors de la création du dépôt ou des stocks:", err);
+      setError(err.response?.data?.error || "Échec de la création du dépôt ou des stocks.");
+    }
+  };
 
-    return (
-        <Modal open={open} onClose={handleCloseModal}>
-            <Box
-                className="bg-white p-6 rounded-lg w-full max-w-2xl mx-auto mt-10 overflow-auto shadow-lg"
-                sx={{
-                    position: 'absolute' as 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    maxHeight: '90vh',
-                    width: '90%',
-                }}
-            >
-                <Typography variant="h5" className="text-center mb-4">
-                    Créer un Dépôt
-                </Typography>
-                {error && (
-                    <Typography color="error" className="mb-2 text-center">
-                        {error}
-                    </Typography>
-                )}
-                <FormControl fullWidth variant="outlined" className="mb-4">
-                    <InputLabel id="session-label">Session Active</InputLabel>
-                    <Select
-                        labelId="session-label"
-                        label="Session Active"
-                        value={selectedSession}
-                        onChange={handleSessionChange}
-                    >
-                        {sessions
-                            .filter((session) => session.status)
-                            .map((session) => (
-                                <MenuItem key={session.session_id} value={session.session_id}>
-                                    {session.name} ({new Date(session.start_date).toLocaleDateString()} -{' '}
-                                    {new Date(session.end_date).toLocaleDateString()})
-                                </MenuItem>
-                            ))}
-                    </Select>
-                </FormControl>
+  const handleCloseModal = () => {
+    setSelectedSession('');
+    setSelectedSeller('');
+    setDepositItems([]);
+    setDepositDate(new Date().toISOString().split('T')[0]);
+    setDiscountFees(0);
+    setError(null);
+    onClose();
+  };
 
-                <FormControl fullWidth variant="outlined" className="mb-4">
-                    <InputLabel id="seller-label">Vendeur</InputLabel>
-                    <Select
-                        labelId="seller-label"
-                        label="Vendeur"
-                        value={selectedSeller}
-                        onChange={handleSellerChange}
-                    >
-                        {sellers.map((seller) => (
-                            <MenuItem key={seller.seller_id} value={seller.seller_id}>
-                                {seller.name}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-
-                <FormControl fullWidth variant="outlined" className="mb-4">
-                    <InputLabel id="game-label">Jeux à Déposer</InputLabel>
-                    <Select
-                        labelId="game-label"
-                        label="Jeux à Déposer"
-                        multiple
-                        value={selectedGames}
-                        onChange={handleGameSelectChange}
-                        input={<OutlinedInput label="Jeux à Déposer" />}
-                        renderValue={(selected) => {
-                            const selectedNames = games
-                                .filter((game) => selected.includes(game.game_id))
-                                .map((game) => game.name);
-                            return selectedNames.join(', ');
-                        }}
-                    >
-                        {games.map((game) => (
-                            <MenuItem key={game.game_id} value={game.game_id}>
-                                <Checkbox checked={selectedGames.indexOf(game.game_id) > -1} />
-                                <ListItemText primary={game.name} />
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-
-                {/* Afficher les détails des jeux sélectionnés */}
-                {selectedGames.map((game_id) => {
-                    const game = games.find((g) => g.game_id === game_id);
-                    const details = gameDetails[game_id];
-                    return (
-                        <Box key={game_id} className="mb-4 p-2 border rounded">
-                            <Grid container spacing={2} alignItems="center">
-                                <Grid item xs={12} sm={6}>
-                                    <Typography variant="subtitle1">{game?.name || 'Jeu Inconnu'}</Typography>
-                                </Grid>
-                                <Grid item xs={12} sm={2}>
-                                    <TextField
-                                        label="Prix (€)"
-                                        type="number"
-                                        variant="outlined"
-                                        fullWidth
-                                        value={details.price}
-                                        onChange={(e) =>
-                                            handleGameDetailChange(game_id, 'price', parseFloat(e.target.value))
-                                        }
-                                        inputProps={{ step: '0.01' }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} sm={2}>
-                                    <TextField
-                                        label="Quantité"
-                                        type="number"
-                                        variant="outlined"
-                                        fullWidth
-                                        value={details.quantity}
-                                        onChange={(e) =>
-                                            handleGameDetailChange(game_id, 'quantity', parseInt(e.target.value))
-                                        }
-                                        inputProps={{ min: '1' }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} sm={12}>
-                                    <IconButton
-                                        color="secondary"
-                                        onClick={() => {
-                                            setSelectedGames((prev) => prev.filter((id) => id !== game_id));
-                                            setGameDetails((prev) => {
-                                                const newDetails = { ...prev };
-                                                delete newDetails[game_id];
-                                                return newDetails;
-                                            });
-                                        }}
-                                    >
-                                        <RemoveCircleOutline />
-                                    </IconButton>
-                                </Grid>
-                            </Grid>
-                        </Box>
-                    );
-                })}
-
-                <Box className="mb-4">
-                    <TextField
-                        label="Date de Dépôt"
-                        type="date"
-                        variant="outlined"
-                        fullWidth
-                        className="mb-4"
-                        value={depositDate}
-                        onChange={(e) => setDepositDate(e.target.value)}
-                        InputLabelProps={{
-                            shrink: true,
-                        }}
-                    />
-                    <TextField
-                        label="Réduction sur les Frais (%)"
-                        type="number"
-                        variant="outlined"
-                        fullWidth
-                        className="mb-4"
-                        value={discountFees}
-                        onChange={(e) => setDiscountFees(parseFloat(e.target.value))}
-                        inputProps={{ step: '0.01', min: '0', max: '100' }}
-                    />
-                </Box>
-
-                <Button variant="contained" color="primary" onClick={handleSubmit} fullWidth>
-                    Ajouter le Dépôt
-                </Button>
+  return (
+    <Dialog open={open} onClose={handleCloseModal} fullWidth maxWidth="md">
+      <DialogTitle>Créer un Dépôt</DialogTitle>
+      <DialogContent dividers>
+        {error && <Typography color="error" align="center">{error}</Typography>}
+        <FormControl fullWidth margin="normal" variant="outlined">
+          <InputLabel id="session-label">Session Active</InputLabel>
+          <Select labelId="session-label" label="Session Active" value={selectedSession} onChange={handleSessionChange}>
+            {sessions.filter(session => session.status).map(session => (
+              <MenuItem key={session.session_id} value={session.session_id}>
+                {session.name} ({new Date(session.start_date).toLocaleDateString()} - {new Date(session.end_date).toLocaleDateString()})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl fullWidth margin="normal" variant="outlined">
+          <InputLabel id="seller-label">Vendeur</InputLabel>
+          <Select labelId="seller-label" label="Vendeur" value={selectedSeller} onChange={handleSellerChange}>
+            {sellers.map(seller => (
+              <MenuItem key={seller.seller_id} value={seller.seller_id}>
+                {seller.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField
+          label="Date de Dépôt"
+          type="date"
+          fullWidth
+          margin="normal"
+          value={depositDate}
+          onChange={(e) => setDepositDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          label="Réduction sur les Frais (%)"
+          type="number"
+          fullWidth
+          margin="normal"
+          value={discountFees}
+          onChange={(e) => setDiscountFees(parseFloat(e.target.value))}
+          inputProps={{ step: '0.01', min: '0', max: '100' }}
+        />
+        <Box mt={3}>
+          <Typography variant="h6">Exemplaires à déposer</Typography>
+          {depositItems.map(item => (
+            <Box key={item.id} mt={2}>
+              <DepositGameEntryCard
+                entry={item}
+                games={games}
+                onUpdateEntry={updateDepositItem}
+                onUpdateExemplaire={updateExemplaire}
+                onAddExemplaire={addExemplaireToItem}
+                onRemoveEntry={removeDepositItem}
+              />
             </Box>
-        </Modal>
-    );
+          ))}
+          <Box mt={2}>
+            <Button variant="contained" onClick={addDepositItem}>
+              Ajouter un jeu
+            </Button>
+          </Box>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleSubmit} variant="contained" color="primary">
+          Ajouter le Dépôt
+        </Button>
+        <Button onClick={handleCloseModal} variant="outlined">
+          Annuler
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 };
-    export default AddDepositModal;
+
+export default AddDepositModal;

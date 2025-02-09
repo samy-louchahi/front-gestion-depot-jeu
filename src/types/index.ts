@@ -21,27 +21,31 @@ export interface Game {
     picture: string;
 }
 
-export interface DepositGame {
-    deposit_game_id?: number; // Optionnel car généré par le backend
+export interface Exemplaire {
+    price: number;
+    state: string;
+  }
+  
+  export interface DepositGame {
+    deposit_game_id?: number; // Optionnel
     deposit_id: number;
     game_id: number;
-    price: number;
     fees: number;
-    quantity: number;
+    exemplaires: { [key: string]: Exemplaire }; // Un dictionnaire d'exemplaires
     Game?: Game; // Association avec Game
-}
-
-export interface Deposit {
-    deposit_id?: number; // Optionnel car généré par le backend
-    deposit_date: string; // Correction : "date" en "deposit_date"
+  }
+  
+  export interface Deposit {
+    deposit_id?: number;
+    deposit_date: string;
     seller_id: number;
     session_id: number;
     discount_fees?: number;
-    Seller?: Seller; // Association avec Seller
-    Session?: Session; // Association avec Session
-    DepositGames?: DepositGame[]; // Association avec DepositGame
-}
-
+    Seller?: Seller;
+    Session?: Session;
+    DepositGames?: DepositGame[];
+  }
+  
 export interface Session {
     session_id?: number;
     name: string;
