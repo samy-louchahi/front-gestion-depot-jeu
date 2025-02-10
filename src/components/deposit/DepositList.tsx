@@ -1,5 +1,3 @@
-// src/components/deposits/DepositList.tsx
-
 import React, { useEffect, useState } from 'react';
 import {
   Button,
@@ -8,7 +6,8 @@ import {
   FormControl,
   Select,
   MenuItem,
-  InputLabel
+  InputLabel,
+  TextField
 } from '@mui/material';
 import DepositCard from './DepositCard';
 import AddDepositModal from './AddDepositModal';
@@ -18,18 +17,19 @@ import {
   deleteDeposit
 } from '../../services/depositService';
 import { getSessions } from '../../services/sessionService';
-import { getSellers } from '../../services/sellerService';  // <-- NOUVEAU (ou via depositService si c’est là-bas)
+import { getSellers } from '../../services/sellerService';
 
 const DepositList: React.FC = () => {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [filteredDeposits, setFilteredDeposits] = useState<Deposit[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [sellers, setSellers] = useState<Seller[]>([]); // <-- NOUVEAU
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [selectedSession, setSelectedSession] = useState<number | 'all'>('all');
-  const [selectedSeller, setSelectedSeller] = useState<number | 'all'>('all'); // <-- NOUVEAU
+  const [selectedSeller, setSelectedSeller] = useState<number | 'all'>('all');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [openAdd, setOpenAdd] = useState<boolean>(false);
+  const [searchTag, setSearchTag] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,7 +37,7 @@ const DepositList: React.FC = () => {
         const [depositsData, sessionsData, sellersData] = await Promise.all([
           getAllDeposits(),
           getSessions(),
-          getSellers() // <-- NOUVEAU
+          getSellers()
         ]);
         setDeposits(depositsData);
         setSessions(sessionsData);
@@ -54,18 +54,18 @@ const DepositList: React.FC = () => {
     fetchData();
   }, []);
 
-  // Fonction de filtrage commune : combine session + vendeur
-  const applyFilter = (
-    sessionId: number | 'all',
-    sellerId: number | 'all'
-  ) => {
-    let result = [...deposits]; // copie initiale de tous les dépôts
+  // Appliquer les filtres combinés
+  const applyFilter = () => {
+    let result = [...deposits];
 
-    if (sessionId !== 'all') {
-      result = result.filter(dep => dep.session_id === sessionId);
+    if (selectedSession !== 'all') {
+      result = result.filter(dep => dep.session_id === selectedSession);
     }
-    if (sellerId !== 'all') {
-      result = result.filter(dep => dep.seller_id === sellerId);
+    if (selectedSeller !== 'all') {
+      result = result.filter(dep => dep.seller_id === selectedSeller);
+    }
+    if (searchTag.trim()) {
+      result = result.filter(dep => dep.tag?.toLowerCase().includes(searchTag.toLowerCase()));
     }
 
     setFilteredDeposits(result);
@@ -73,27 +73,22 @@ const DepositList: React.FC = () => {
 
   const handleSessionChange = (sessionId: number | 'all') => {
     setSelectedSession(sessionId);
-    // On applique le filtre
-    applyFilter(sessionId, selectedSeller);
+    applyFilter();
   };
 
-  // Nouveau : handleSellerChange
   const handleSellerChange = (sellerId: number | 'all') => {
     setSelectedSeller(sellerId);
-    // On applique le filtre
-    applyFilter(selectedSession, sellerId);
+    applyFilter();
   };
 
-  // Quand on ajoute un nouveau dépôt
+  const handleSearchTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTag(e.target.value);
+    applyFilter();
+  };
+
   const handleAddDeposit = (newDeposit: Deposit) => {
     setDeposits(prev => [...prev, newDeposit]);
-    // Vérifier s’il correspond aux filtres en cours
-    if (
-      (selectedSession === 'all' || newDeposit.session_id === selectedSession) &&
-      (selectedSeller === 'all' || newDeposit.seller_id === selectedSeller)
-    ) {
-      setFilteredDeposits(prev => [...prev, newDeposit]);
-    }
+    applyFilter(); // Réapplique les filtres pour voir si le nouveau dépôt est affiché
   };
 
   if (loading) {
@@ -112,8 +107,17 @@ const DepositList: React.FC = () => {
         </Button>
       </Box>
 
+      {/* Recherche par étiquette */}
+      <Box className="flex justify-center space-x-4 mb-4">
+        <TextField
+          label="Rechercher par étiquette"
+          value={searchTag}
+          onChange={handleSearchTagChange}
+        />
+      </Box>
+
       {/* Sélecteur de session */}
-      <FormControl fullWidth className="mb-6">
+      <FormControl fullWidth className="mb-4">
         <InputLabel id="session-select-label">Filtrer par Session</InputLabel>
         <Select
           labelId="session-select-label"
@@ -131,7 +135,7 @@ const DepositList: React.FC = () => {
       </FormControl>
 
       {/* Sélecteur de vendeur */}
-      <FormControl fullWidth className="mb-6">
+      <FormControl fullWidth className="mb-4">
         <InputLabel id="seller-select-label">Filtrer par Vendeur</InputLabel>
         <Select
           labelId="seller-select-label"
@@ -167,7 +171,7 @@ const DepositList: React.FC = () => {
           ))
         ) : (
           <Typography className="text-center" variant="h6">
-            Aucun dépôt disponible.
+            Aucun dépôt correspondant trouvé.
           </Typography>
         )}
       </Box>

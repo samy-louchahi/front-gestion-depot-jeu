@@ -73,7 +73,7 @@ const VendorStatsCard: React.FC<VendorStatsCardProps> = ({ sessionId }) => {
             <Typography className="text-gray-500">Vendeur le plus actif</Typography>
             <Typography className="text-2xl font-bold text-blue-600">{stats.topVendor.sellerName}</Typography>
             <Typography className="text-gray-600">
-              Nombre de ses ventes : <strong>{stats.topVendor.totalSales}</strong>
+              Jeux vendus : <strong>{stats.topVendor.totalSales}</strong>
             </Typography>
           </div>
         </Box>

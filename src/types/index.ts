@@ -44,6 +44,7 @@ export interface Exemplaire {
     Seller?: Seller;
     Session?: Session;
     DepositGames?: DepositGame[];
+    tag: string;
   }
   
 export interface Session {
@@ -121,4 +122,7 @@ export interface VendorShare {
     totalSales: number;
     totalCommission: number;
     totalBenef: number;
+  }
+  export interface Invoice {
+    
   }
