@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Typography } from '@mui/material';
+import { iconClasses, Typography } from '@mui/material';
 
 // Icônes Heroicons ou personnalisées
 const icons = {
@@ -100,6 +100,22 @@ const icons = {
             />
         </svg>
     ),
+    statistics: (
+        <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        className="w-12 h-12 text-indigo-500"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M3 3v18h18M13 9v7m4-11v11m-8-5v5m-4-7v7"
+        />
+      </svg>
+    ),
 };
 
 const DashboardPage: React.FC = () => {
@@ -110,6 +126,7 @@ const DashboardPage: React.FC = () => {
         { title: 'Ventes', path: '/sales', icon: icons.sale },
         { title: 'Jeux', path: '/games', icon: icons.game },
         { title: 'Acheteurs', path: '/buyers', icon: icons.buyer },
+        { title: 'Statistiques', path: '/statistics', icon: icons.statistics },
     ];
 
     return (

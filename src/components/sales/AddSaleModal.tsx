@@ -4,27 +4,33 @@ import React, { useState, useEffect } from 'react';
 import {
   Modal,
   Box,
-  TextField,
   Typography,
   Button,
-  MenuItem,
   FormControl,
   InputLabel,
   Select,
+  MenuItem,
+  TextField,
+  Table,
+  TableHead,
+  TableBody,
+  TableCell,
+  TableRow,
   Checkbox,
-  ListItemText,
-  OutlinedInput,
   IconButton,
-  Grid,
-  CircularProgress,
   Snackbar,
   Alert,
-  SelectChangeEvent,
+  CircularProgress,
 } from '@mui/material';
 import { RemoveCircleOutline } from '@mui/icons-material';
-import { Sale, Buyer, Session, DepositGame, Seller, Game } from '../../types';
+import { Buyer, Seller, Session, DepositGame, Deposit, Sale } from '../../types';
+import {
+  getSellers,
+  getAllDeposits,
+  getAllDepositGames,
+  getActiveSessions
+} from '../../services/depositService';
 import { createSale, getSaleById, createSaleDetail } from '../../services/saleService';
-import { getSellers, getAllDepositGames, getActiveSessions } from '../../services/depositService';
 import { getBuyers } from '../../services/buyerService';
 
 interface AddSaleModalProps {
@@ -33,38 +39,76 @@ interface AddSaleModalProps {
   onAdd: (sale: Sale) => void;
 }
 
+/**
+ * AddSaleModal (version "Wizard" en 3 étapes) :
+ *  Étape 1 : Choix Session (active), Vendeur (ayant fait au moins un dépôt), Acheteur (optionnel)
+ *  Étape 2 : Liste des DepositGames (session + vendeur + exemplaires>0), sélection & quantités
+ *  Étape 3 : Récap, confirmation & validation
+ */
 const AddSaleModal: React.FC<AddSaleModalProps> = ({ open, onClose, onAdd }) => {
+  // ----- ÉTATS -----
+  // Étape actuelle (1, 2 ou 3)
+  const [currentStep, setCurrentStep] = useState<number>(1);
+
+  // Données récupérées
   const [buyers, setBuyers] = useState<Buyer[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [depositGames, setDepositGames] = useState<DepositGame[]>([]);
-  const [selectedBuyer, setSelectedBuyer] = useState<number | string>('');
-  const [selectedSession, setSelectedSession] = useState<number | string>('');
-  const [selectedDepositGamesIds, setSelectedDepositGamesIds] = useState<number[]>([]);
-  // saleDetails enregistre pour chaque DepositGame l'objet { quantity: number } représentant
-  // le nombre d'exemplaires vendus pour ce DepositGame.
-  const [saleDetails, setSaleDetails] = useState<Record<number, { quantity: number }>>({});
+
+  // Sélections Wizard
+  const [selectedBuyer, setSelectedBuyer] = useState<number | ''>('');
+  const [selectedSeller, setSelectedSeller] = useState<number | ''>('');
+  const [selectedSession, setSelectedSession] = useState<number | ''>('');
+
+  // Étape 2 : liste des jeux sélectionnés, avec la quantité
+  interface ChosenGame {
+    deposit_game_id: number;
+    quantity: number;
+  }
+  const [chosenGames, setChosenGames] = useState<ChosenGame[]>([]);
+
+  // Informations de la vente
   const [saleDate, setSaleDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [saleStatus, setSaleStatus] = useState<'en cours' | 'finalisé' | 'annulé'>('en cours');
+
+  // Erreurs, chargement, notifications
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
-  const [saleStatus, setSaleStatus] = useState<'en cours' | 'finalisé' | 'annulé'>('en cours');
 
+  // ----- CHARGEMENT DES DONNÉES -----
   useEffect(() => {
     if (open) {
       const fetchData = async () => {
         try {
-          const [buyersData, sessionsData, sellersData, depositGamesData] = await Promise.all([
+          // Récupérer :
+          //  1) Acheteurs
+          //  2) Vendeurs
+          //  3) Sessions actives
+          //  4) Tous les dépôts
+          //  5) Tous les DepositGames
+          const [
+            buyersData,
+            sellersData,
+            sessionsData,
+            depositsData,
+            depositGamesData
+          ] = await Promise.all([
             getBuyers(),
-            getActiveSessions(),
             getSellers(),
+            getActiveSessions(), // renvoie déjà les sessions "actives" (status=true)
+            getAllDeposits(),
             getAllDepositGames(),
           ]);
           setBuyers(buyersData);
-          setSessions(sessionsData);
           setSellers(sellersData);
+          const activeSessions = sessionsData.filter((s) => s.status);
+          setSessions(activeSessions);  // Sessions actives
+          setDeposits(depositsData);
           setDepositGames(depositGamesData);
         } catch (err) {
           console.error('Error fetching data:', err);
@@ -72,271 +116,464 @@ const AddSaleModal: React.FC<AddSaleModalProps> = ({ open, onClose, onAdd }) => 
         }
       };
       fetchData();
+      // Réinitialiser l'état du Wizard
+      setCurrentStep(1);
+      setSelectedBuyer('');
+      setSelectedSeller('');
+      setSelectedSession('');
+      setChosenGames([]);
+      setSaleDate(new Date().toISOString().split('T')[0]);
+      setSaleStatus('en cours');
+      setError(null);
     }
   }, [open]);
 
-  const handleBuyerChange = (event: SelectChangeEvent<string | number>) => {
-    setSelectedBuyer(event.target.value as number);
-  };
-
-  const handleSessionChange = (event: SelectChangeEvent<string | number>) => {
-    setSelectedSession(event.target.value as number);
-  };
-
-  const handleDepositGameChange = (event: SelectChangeEvent<number[]>) => {
-    const value = event.target.value as number[];
-    setSelectedDepositGamesIds(value);
-
-    // Ajout des détails pour chaque DepositGame sélectionné, si non déjà présent
-    const newSaleDetails: Record<number, { quantity: number }> = { ...saleDetails };
-    value.forEach((deposit_game_id) => {
-      if (!newSaleDetails[deposit_game_id]) {
-        newSaleDetails[deposit_game_id] = { quantity: 1 };
-      }
-    });
-    // Supprimer les détails pour les jeux non sélectionnés
-    Object.keys(newSaleDetails).forEach((key) => {
-      if (!value.includes(Number(key))) {
-        delete newSaleDetails[Number(key)];
-      }
-    });
-    setSaleDetails(newSaleDetails);
-  };
-
-  const handleSaleDetailChange = (
-    deposit_game_id: number,
-    field: keyof { quantity: number },
-    value: number
-  ) => {
-    setSaleDetails((prev) => ({
-      ...prev,
-      [deposit_game_id]: {
-        ...prev[deposit_game_id],
-        [field]: value,
-      },
-    }));
-  };
-
-  const handleSubmit = async () => {
-    if (!selectedSession) {
-      setError('Veuillez sélectionner une session.');
-      return;
-    }
-    if (selectedDepositGamesIds.length === 0) {
-      setError('Veuillez sélectionner au moins un jeu déposé.');
-      return;
-    }
-    // Pour chaque DepositGame sélectionné, vérifiez que la quantité vendue ne dépasse pas la disponibilité.
-    for (const deposit_game_id of selectedDepositGamesIds) {
-      const detail = saleDetails[deposit_game_id];
-      if (!detail || detail.quantity <= 0) {
-        setError('Veuillez définir une quantité valide pour tous les jeux.');
-        return;
-      }
-      const depositGame = depositGames.find(dg => dg.deposit_game_id === deposit_game_id);
-      // La disponibilité est déterminée par le nombre d'exemplaires enregistrés dans le champ exemplaires.
-      const availableQuantity = depositGame && depositGame.exemplaires
-        ? Object.keys(depositGame.exemplaires).length
-        : 0;
-      if (depositGame && detail.quantity > availableQuantity) {
-        setError(`La quantité pour le jeu "${depositGame.Game?.name}" dépasse la disponibilité (${availableQuantity}).`);
-        return;
-      }
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const newSale = await createSale({
-        buyer_id: selectedBuyer ? Number(selectedBuyer) : undefined,
-        session_id: Number(selectedSession),
-        sale_date: saleDate,
-        sale_status: saleStatus,
-      });
-
-      for (const deposit_game_id of selectedDepositGamesIds) {
-        await createSaleDetail({
-          sale_id: newSale.sale_id!,
-          deposit_game_id: deposit_game_id,
-          quantity: saleDetails[deposit_game_id].quantity,
-        });
-      }
-
-      const fetchedSale = await getSaleById(newSale.sale_id!);
-      onAdd(fetchedSale);
-      setSnackbarMessage('Vente ajoutée avec succès !');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
-      setSelectedBuyer('');
-      setSelectedSession('');
-      setSelectedDepositGamesIds([]);
-      setSaleDetails({});
-      setSaleDate(new Date().toISOString().split('T')[0]);
-      setError(null);
-      onClose();
-    } catch (err: any) {
-      console.error('Error creating sale:', err);
-      setError(err.response?.data?.error || 'Échec de la création de la vente.');
-      setSnackbarMessage(err.response?.data?.error || 'Échec de la création de la vente.');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCloseModal = () => {
-    setSelectedBuyer('');
-    setSelectedSession('');
-    setSelectedDepositGamesIds([]);
-    setSaleDetails({});
-    setSaleDate(new Date().toISOString().split('T')[0]);
-    setError(null);
+  // Fermeture du wizard
+  const handleClose = () => {
+    setCurrentStep(1);
     onClose();
   };
 
+  // Fermeture du Snackbar
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
 
+  // ----- ÉTAPE 1 -----
+  // Filtrer les vendeurs qui ont fait des dépôts dans la session sélectionnée
+  const selectedSessionDeposits = deposits.filter(
+    (dep) => dep.session_id === (selectedSession ? Number(selectedSession) : -1)
+  );
+  // En tirer la liste des seller_id
+  const sellersWithDepositInSession = new Set(
+    selectedSessionDeposits.map((dep) => dep.seller_id)
+  );
+  // Filtrer la liste globale des sellers
+  const filteredSellers = sellers.filter((s) =>
+    sellersWithDepositInSession.has(s.seller_id)
+  );
+
+  const Step1 = () => (
+    <div className="space-y-4">
+      <Typography variant="h6" className="text-center font-semibold mb-4">
+        Étape 1 : Choisir la Session (active), Vendeur (ayant fait un dépôt) et l’Acheteur (optionnel)
+      </Typography>
+
+      {error && (
+        <Typography color="error" className="text-center">
+          {error}
+        </Typography>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Sélection Session (active) */}
+        <FormControl variant="outlined" className="w-full">
+          <InputLabel id="session-select-label">Session (active)</InputLabel>
+          <Select
+            labelId="session-select-label"
+            label="Session (active)"
+            value={selectedSession}
+            onChange={(e) => {
+              // Changer de session => reset seller
+              setSelectedSeller('');
+              setSelectedSession(e.target.value as number);
+            }}
+          >
+            <MenuItem value="">
+              <em>-- Sélectionner --</em>
+            </MenuItem>
+            {sessions.map((s) => (
+              <MenuItem key={s.session_id} value={s.session_id}>
+                {s.name} (du {new Date(s.start_date).toLocaleDateString()} au{' '}
+                {new Date(s.end_date).toLocaleDateString()})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Sélection Vendeur */}
+        <FormControl variant="outlined" className="w-full">
+          <InputLabel id="seller-select-label">Vendeur</InputLabel>
+          <Select
+            labelId="seller-select-label"
+            label="Vendeur"
+            value={selectedSeller}
+            onChange={(e) => setSelectedSeller(e.target.value as number)}
+            disabled={!selectedSession} // Bloquer si pas de session choisie
+          >
+            <MenuItem value="">
+              <em>-- Sélectionner --</em>
+            </MenuItem>
+            {filteredSellers.map((s) => (
+              <MenuItem key={s.seller_id} value={s.seller_id}>
+                {s.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </div>
+
+      {/* Acheteur (optionnel) */}
+      <FormControl variant="outlined" className="w-full mt-4">
+        <InputLabel id="buyer-select-label">Acheteur (Optionnel)</InputLabel>
+        <Select
+          labelId="buyer-select-label"
+          label="Acheteur (Optionnel)"
+          value={selectedBuyer}
+          onChange={(e) => setSelectedBuyer(e.target.value as number)}
+        >
+          <MenuItem value="">
+            <em>Aucun</em>
+          </MenuItem>
+          {buyers.map((b) => (
+            <MenuItem key={b.buyer_id} value={b.buyer_id}>
+              {b.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <div className="flex justify-end mt-4">
+        <Button
+          variant="contained"
+          color="primary"
+          disabled={!selectedSession || !selectedSeller}
+          onClick={() => setCurrentStep(2)}
+        >
+          Étape Suivante
+        </Button>
+      </div>
+    </div>
+  );
+
+  // ----- ÉTAPE 2 -----
+  // Construire map deposit -> seller_id + session_id
+  const depositIdToSellerId: Record<number, number> = {};
+  const depositIdToSessionId: Record<number, number> = {};
+
+  deposits.forEach((dep) => {
+    depositIdToSellerId[dep.deposit_id!] = dep.seller_id;
+    depositIdToSessionId[dep.deposit_id!] = dep.session_id;
+  });
+
+  // Filtrer les DepositGames selon la session et le vendeur
+  const step2FilteredGames = depositGames.filter((dg) => {
+    if (!selectedSession || !selectedSeller) return false;
+
+    // Récupérer le deposit
+    const sId = depositIdToSellerId[dg.deposit_id];
+    const sessId = depositIdToSessionId[dg.deposit_id];
+    if (sId !== Number(selectedSeller)) return false;
+    if (sessId !== Number(selectedSession)) return false;
+
+    // Vérifier exemplaires > 0
+    const count = dg.exemplaires ? Object.keys(dg.exemplaires).length : 0;
+    return count > 0;
+  });
+
+  // Vérifier si un depositGame est sélectionné
+  const isGameSelected = (dgId: number) =>
+    chosenGames.some((item) => item.deposit_game_id === dgId);
+
+  // Récupérer la quantité vendue associée à un depositGame
+  const getQuantityForGame = (dgId: number) => {
+    const found = chosenGames.find((item) => item.deposit_game_id === dgId);
+    return found ? found.quantity : 0;
+  };
+
+  // Ajouter / retirer un depositGame de chosenGames
+  const toggleSelectGame = (dgId: number) => {
+    setChosenGames((prev) => {
+      const idx = prev.findIndex((x) => x.deposit_game_id === dgId);
+      if (idx >= 0) {
+        // Retirer
+        return prev.filter((x) => x.deposit_game_id !== dgId);
+      }
+      // Ajouter
+      return [...prev, { deposit_game_id: dgId, quantity: 1 }];
+    });
+  };
+
+  // Mettre à jour la quantité
+  const updateGameQuantity = (dgId: number, qty: number) => {
+    setChosenGames((prev) =>
+      prev.map((item) =>
+        item.deposit_game_id === dgId ? { ...item, quantity: qty } : item
+      )
+    );
+  };
+
+  const Step2 = () => (
+    <div className="space-y-4">
+      <Typography variant="h6" className="text-center font-semibold mb-4">
+        Étape 2 : Sélectionner les Jeux et Saisir les Quantités
+      </Typography>
+      {error && (
+        <Typography color="error" className="text-center">
+          {error}
+        </Typography>
+      )}
+
+      <Box className="border border-gray-300 rounded-md overflow-auto">
+        <Table size="small">
+          <TableHead className="bg-gray-100">
+            <TableRow>
+              <TableCell />
+              <TableCell>Nom du Jeu</TableCell>
+              <TableCell>Frais (%)</TableCell>
+              <TableCell>Quantité Dispo</TableCell>
+              <TableCell>Quantité à Vendre</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {step2FilteredGames.map((dg) => {
+              const exemplairesCount = dg.exemplaires
+                ? Object.keys(dg.exemplaires).length
+                : 0;
+              const selected = isGameSelected(dg.deposit_game_id!);
+              const qty = getQuantityForGame(dg.deposit_game_id!);
+
+              return (
+                <TableRow key={dg.deposit_game_id} className="hover:bg-gray-50">
+                  <TableCell>
+                    <Checkbox
+                      checked={selected}
+                      onChange={() => toggleSelectGame(dg.deposit_game_id!)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-semibold">{dg.Game?.name}</div>
+                    <div className="text-xs text-gray-400">Dépôt ID: {dg.deposit_id}</div>
+                  </TableCell>
+                  <TableCell>{dg.fees}%</TableCell>
+                  <TableCell>{exemplairesCount}</TableCell>
+                  <TableCell>
+                    {selected ? (
+                      <TextField
+                        type="number"
+                        size="small"
+                        value={qty || 1}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 1;
+                          if (val > exemplairesCount) return; 
+                          updateGameQuantity(dg.deposit_game_id!, val);
+                        }}
+                        inputProps={{
+                          min: 1,
+                          max: exemplairesCount,
+                        }}
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-300">N/A</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </Box>
+
+      <div className="flex justify-end mt-4 gap-2">
+        <Button variant="outlined" onClick={() => setCurrentStep(1)}>
+          Retour
+        </Button>
+        <Button
+          variant="contained"
+          color="primary"
+          disabled={chosenGames.length === 0}
+          onClick={() => setCurrentStep(3)}
+        >
+          Étape Suivante
+        </Button>
+      </div>
+    </div>
+  );
+
+  // ----- ÉTAPE 3 -----
+  // Récap final
+  const Step3 = () => {
+    // Construire la liste de récap
+    const recapList = chosenGames.map((item) => {
+      const dg = depositGames.find((g) => g.deposit_game_id === item.deposit_game_id);
+      const exemplairesCount = dg?.exemplaires
+        ? Object.keys(dg.exemplaires).length
+        : 0;
+      return {
+        deposit_game_id: item.deposit_game_id,
+        name: dg?.Game?.name || 'N/A',
+        fees: dg?.fees ?? 0,
+        available: exemplairesCount,
+        quantity: item.quantity,
+      };
+    });
+
+    const finalizeSale = async () => {
+      if (!selectedSession || !selectedSeller) {
+        setError('Session ou Vendeur manquant.');
+        return;
+      }
+      if (chosenGames.length === 0) {
+        setError('Aucun jeu sélectionné.');
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        // 1. Créer la vente
+        const newSale = await createSale({
+          buyer_id: selectedBuyer ? Number(selectedBuyer) : undefined,
+          session_id: Number(selectedSession),
+          sale_date: saleDate,
+          sale_status: saleStatus,
+        });
+
+        // 2. Créer SaleDetail pour chaque jeu sélectionné
+        for (const item of chosenGames) {
+          await createSaleDetail({
+            sale_id: newSale.sale_id!,
+            deposit_game_id: item.deposit_game_id,
+            quantity: item.quantity,
+          });
+        }
+
+        // 3. Récupérer la vente complète
+        const fetchedSale = await getSaleById(newSale.sale_id!);
+        onAdd(fetchedSale);
+
+        // Notification succès
+        setSnackbarMessage('Vente ajoutée avec succès !');
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+
+        // Reset
+        setCurrentStep(1);
+        onClose();
+      } catch (err: any) {
+        console.error('Error finalizing sale:', err);
+        setError(err.response?.data?.error || 'Erreur lors de la création de la vente.');
+        setSnackbarMessage(err.response?.data?.error || 'Erreur lors de la création de la vente.');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <Typography variant="h6" className="text-center font-semibold mb-4">
+          Étape 3 : Récapitulatif et Confirmation
+        </Typography>
+        {error && (
+          <Typography color="error" className="text-center">
+            {error}
+          </Typography>
+        )}
+
+        <div className="bg-gray-100 p-2 rounded text-sm text-gray-600">
+          Vendeur ID: {selectedSeller} | Session ID: {selectedSession} |{' '}
+          {selectedBuyer ? `Acheteur ID: ${selectedBuyer}` : `Pas d’acheteur choisi`}
+          <br />
+          Date de Vente : {saleDate} | Statut : {saleStatus}
+        </div>
+
+        <Box className="border border-gray-300 rounded-md overflow-auto">
+          <Table size="small">
+            <TableHead className="bg-gray-100">
+              <TableRow>
+                <TableCell>Jeu</TableCell>
+                <TableCell>Frais (%)</TableCell>
+                <TableCell>Qte Dispo</TableCell>
+                <TableCell>Qte Vendue</TableCell>
+                <TableCell />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {recapList.map((r) => (
+                <TableRow key={r.deposit_game_id} className="hover:bg-gray-50">
+                  <TableCell>{r.name}</TableCell>
+                  <TableCell>{r.fees}</TableCell>
+                  <TableCell>{r.available}</TableCell>
+                  <TableCell>{r.quantity}</TableCell>
+                  <TableCell>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        // Permet de supprimer un jeu du récap
+                        setChosenGames((prev) =>
+                          prev.filter((c) => c.deposit_game_id !== r.deposit_game_id)
+                        );
+                      }}
+                    >
+                      <RemoveCircleOutline />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+
+        <div className="flex justify-end mt-4 gap-2">
+          <Button variant="outlined" onClick={() => setCurrentStep(2)}>
+            Retour
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={recapList.length === 0 || loading}
+            onClick={finalizeSale}
+          >
+            {loading ? <CircularProgress size={20} /> : 'Valider la Vente'}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // Rendu final selon currentStep
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return <Step1 />;
+      case 2:
+        return <Step2 />;
+      case 3:
+        return <Step3 />;
+      default:
+        return <Step1 />;
+    }
+  };
+
   return (
-    <Modal open={open} onClose={handleCloseModal}>
+    <Modal open={open} onClose={handleClose}>
       <Box
-        className="bg-white p-6 rounded-lg w-full max-w-3xl mx-auto mt-10 overflow-auto shadow-lg"
+        className="bg-white p-6 rounded-lg w-full max-w-4xl mx-auto mt-10 shadow-lg space-y-6"
         sx={{
-          position: 'absolute',
+          position: 'absolute' as 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
           maxHeight: '90vh',
-          width: '90%',
         }}
       >
-        <Typography variant="h5" className="text-center mb-4">
-          Ajouter une Vente
-        </Typography>
-        {error && (
-          <Typography color="error" className="mb-2 text-center">
-            {error}
-          </Typography>
-        )}
-        <FormControl fullWidth variant="outlined" className="mb-4">
-          <InputLabel id="buyer-label">Acheteur (Optionnel)</InputLabel>
-          <Select labelId="buyer-label" label="Acheteur (Optionnel)" value={selectedBuyer} onChange={handleBuyerChange}>
-            <MenuItem value="">
-              <em>Aucun</em>
-            </MenuItem>
-            {buyers.map((buyer) => (
-              <MenuItem key={buyer.buyer_id} value={buyer.buyer_id}>
-                {buyer.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl fullWidth variant="outlined" className="mb-4">
-          <InputLabel id="session-label">Session</InputLabel>
-          <Select labelId="session-label" label="Session" value={selectedSession} onChange={handleSessionChange}>
-            {sessions.map((session) => (
-              <MenuItem key={session.session_id} value={session.session_id}>
-                {session.name} ({new Date(session.start_date).toLocaleDateString()} - {new Date(session.end_date).toLocaleDateString()})
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl fullWidth variant="outlined" className="mb-4">
-          <InputLabel id="deposit-game-label">Jeux Déposés</InputLabel>
-          <Select
-            labelId="deposit-game-label"
-            label="Jeux Déposés"
-            multiple
-            value={selectedDepositGamesIds}
-            onChange={handleDepositGameChange}
-            input={<OutlinedInput label="Jeux Déposés" />}
-            renderValue={(selected) => {
-              const selectedNames = depositGames
-                .filter((dg) => dg.deposit_game_id !== undefined && selected.includes(dg.deposit_game_id))
-                .map((dg) => `${dg.Game?.name} (Dépôt ID: ${dg.deposit_id})`);
-              return selectedNames.join(', ');
-            }}
-          >
-            {depositGames.map((dg) => (
-              <MenuItem key={dg.deposit_game_id} value={dg.deposit_game_id}>
-                <Checkbox checked={dg.deposit_game_id !== undefined && selectedDepositGamesIds.indexOf(dg.deposit_game_id) > -1} />
-                <ListItemText
-                  primary={`${dg.Game?.name} | Prix: €${dg.exemplaires ? Object.values(dg.exemplaires).map(e => e.price).join(', ') : ''} | Frais: ${dg.fees}% | Quantité Disponible: ${dg.exemplaires ? Object.keys(dg.exemplaires).length : 0}`}
-                />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        {/* Détails pour chaque jeu sélectionné */}
-        {selectedDepositGamesIds.map((deposit_game_id) => {
-          const dg = depositGames.find((dg) => dg.deposit_game_id === deposit_game_id);
-          if (!dg) return null;
-          return (
-            <Box key={deposit_game_id} className="mb-4 p-2 border rounded">
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="subtitle1">{dg.Game?.name || 'Jeu Inconnu'}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="Quantité"
-                    type="number"
-                    variant="outlined"
-                    fullWidth
-                    value={saleDetails[deposit_game_id]?.quantity || 1}
-                    onChange={(e) =>
-                      handleSaleDetailChange(deposit_game_id, 'quantity', parseInt(e.target.value) || 1)
-                    }
-                    inputProps={{
-                      min: '1',
-                      max: dg.exemplaires ? Object.keys(dg.exemplaires).length : 0,
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <IconButton
-                    color="secondary"
-                    onClick={() => {
-                      setSelectedDepositGamesIds((prev) => prev.filter((id) => id !== deposit_game_id));
-                      setSaleDetails((prev) => {
-                        const newDetails = { ...prev };
-                        delete newDetails[deposit_game_id];
-                        return newDetails;
-                      });
-                    }}
-                  >
-                    <RemoveCircleOutline />
-                  </IconButton>
-                </Grid>
-              </Grid>
-            </Box>
-          );
-        })}
-        <Box className="mb-4">
-          <TextField
-            label="Date de Vente"
-            type="date"
-            variant="outlined"
-            fullWidth
-            className="mb-4"
-            value={saleDate}
-            onChange={(e) => setSaleDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-        </Box>
-        <Button variant="contained" color="primary" onClick={handleSubmit} fullWidth disabled={loading}>
-          {loading ? <CircularProgress size={24} /> : 'Ajouter la Vente'}
-        </Button>
+        {renderStep()}
+
+        {/* Snackbar */}
         <Snackbar
           open={snackbarOpen}
           autoHideDuration={6000}
-          onClose={handleSnackbarClose}
+          onClose={() => setSnackbarOpen(false)}
           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          <Alert onClose={handleSnackbarClose} severity={snackbarSeverity} sx={{ width: '100%' }}>
+          <Alert
+            onClose={() => setSnackbarOpen(false)}
+            severity={snackbarSeverity}
+            sx={{ width: '100%' }}
+          >
             {snackbarMessage}
           </Alert>
         </Snackbar>

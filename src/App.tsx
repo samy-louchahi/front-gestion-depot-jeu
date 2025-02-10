@@ -9,6 +9,7 @@ import DepositPage from './pages/DepositPage';
 import SalePage from './pages/SalePage';
 import Login from './pages/Login';
 import PrivateRoute from './components/PrivateRoutes';
+import SessionStats from './pages/SessionStats';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { useContext } from 'react';
 
@@ -37,6 +38,7 @@ const App: React.FC = () => {
                     <Route path="/sessions" element={<PrivateRoute><SessionPage /></PrivateRoute>} />
                     <Route path="/deposits" element={<PrivateRoute><DepositPage /></PrivateRoute>} />
                     <Route path="/sales" element={<PrivateRoute><SalePage /></PrivateRoute>} />
+                    <Route path="/statistics" element={<PrivateRoute><SessionStats /></PrivateRoute>} />
                 </Routes>
             </Router>
         </AuthProvider>
@@ -57,6 +59,7 @@ const NavigationButtons: React.FC = () => {
             <NavLink to="/sessions">Session</NavLink>
             <NavLink to="/deposits">Dépôt</NavLink>
             <NavLink to="/sales">Vente</NavLink>
+            <NavLink to="/statistics">Statistiques</NavLink>
         </div>
     );
 };

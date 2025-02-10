@@ -108,3 +108,17 @@ export interface Stock {
     Seller?: Seller;
     Game?: Game;
 }
+
+export interface VendorShare {
+    seller_id: number;
+    sellerName: string;
+    total: number;  // total en euros des ventes
+}
+  
+  export interface GlobalBalance {
+    session_id: number;
+    totalDepositFees: number;
+    totalSales: number;
+    totalCommission: number;
+    totalBenef: number;
+  }
