@@ -17,3 +17,9 @@ export const createOrUpdateStock = async (stockData: {
         throw error;
     }
 };
+
+export const getAllStocks = async (sessionId?: number): Promise<Stock[]> => {
+    const params = sessionId ? { session_id: sessionId } : {};
+    const response = await api.get('/stocks', { params });
+    return response.data;
+  };

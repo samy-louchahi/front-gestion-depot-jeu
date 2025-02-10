@@ -10,6 +10,7 @@ import SalePage from './pages/SalePage';
 import Login from './pages/Login';
 import PrivateRoute from './components/PrivateRoutes';
 import SessionStats from './pages/SessionStats';
+import StockPage from './pages/StockPage';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { useContext } from 'react';
 
@@ -21,7 +22,25 @@ const App: React.FC = () => {
                     <div className="container mx-auto px-4">
                         <div className="flex justify-between items-center py-4">
                             <Link to="/" className="text-2xl font-bold text-blue-600">
-                                Gestion de Jeux
+                            <div className="flex flex-col items-center space-y-2">
+                                <svg
+                                xmlns="http://www.w3.org/2000/svg"  
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth="1.5"
+                                stroke="currentColor"
+                                className="w-16 h-16 text-indigo-600"
+                                >
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+                                    <circle cx="16" cy="8" r="1.5" fill="currentColor" />
+                                    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                                    <circle cx="8" cy="16" r="1.5" fill="currentColor" />
+                                    <circle cx="16" cy="16" r="1.5" fill="currentColor" />
+                                </svg>
+  
+                                <h4 className="text-xl font-bold text-gray-800">Gestion de jeu</h4>
+                            </div>
                             </Link>
                             <NavigationButtons />
                             <AuthButtons />
@@ -39,6 +58,7 @@ const App: React.FC = () => {
                     <Route path="/deposits" element={<PrivateRoute><DepositPage /></PrivateRoute>} />
                     <Route path="/sales" element={<PrivateRoute><SalePage /></PrivateRoute>} />
                     <Route path="/statistics" element={<PrivateRoute><SessionStats /></PrivateRoute>} />
+                    <Route path="/stocks" element={<PrivateRoute><StockPage /></PrivateRoute>} />
                 </Routes>
             </Router>
         </AuthProvider>
@@ -59,7 +79,9 @@ const NavigationButtons: React.FC = () => {
             <NavLink to="/sessions">Session</NavLink>
             <NavLink to="/deposits">Dépôt</NavLink>
             <NavLink to="/sales">Vente</NavLink>
+            <NavLink to="/stocks">Stocks</NavLink>
             <NavLink to="/statistics">Statistiques</NavLink>
+            
         </div>
     );
 };
