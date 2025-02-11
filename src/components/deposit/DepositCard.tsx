@@ -1,8 +1,28 @@
 import React, { useState } from 'react';
-import { Typography, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
+import {
+  Typography,
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+  IconButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from '@mui/material';
+import jsPDF from 'jspdf';
+import DownloadIcon from '@mui/icons-material/Download';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { Deposit, DepositGame } from '../../types';
 import { formatCurrency } from '../../utils/formatCurrency';
-import jsPDF from 'jspdf';
+import { deleteDeposit } from '../../services/depositService';
 
 interface DepositCardProps {
   deposit: Deposit;
@@ -10,7 +30,10 @@ interface DepositCardProps {
   onUpdate: (deposit: Deposit) => void;
 }
 
-const DepositCard: React.FC<DepositCardProps> = ({ deposit, onDelete, onUpdate }) => {
+const DepositCard: React.FC<DepositCardProps> = ({ deposit, onDelete }) => {
+  const [openDialog, setOpenDialog] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   // Fonction pour générer l’étiquette sous forme de PDF
   const generatePdf = () => {
     const doc = new jsPDF();
@@ -43,6 +66,37 @@ const DepositCard: React.FC<DepositCardProps> = ({ deposit, onDelete, onUpdate }
 
     // Téléchargement du fichier
     doc.save(`etiquette-depot-${deposit.deposit_id}.pdf`);
+  };
+
+  // Fonction de confirmation de suppression
+  const handleConfirmDelete = () => {
+    setOpenDialog(true);
+  };
+
+  // Fonction pour supprimer le dépôt
+  const handleDelete = async () => {
+    try {
+      setLoading(true); // Activer l'état de chargement
+
+      // Appel API pour supprimer le dépôt
+      if (deposit.deposit_id !== undefined) {
+        await deleteDeposit(deposit.deposit_id);
+      } else {
+        console.error('Deposit ID is undefined');
+      }
+
+      // Met à jour la liste locale après suppression réussie
+      if (deposit.deposit_id !== undefined) {
+        onDelete(deposit.deposit_id);
+      } else {
+        console.error('Deposit ID is undefined');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du dépôt :', error);
+    } finally {
+      setLoading(false);
+      setOpenDialog(false);
+    }
   };
 
   return (
@@ -100,14 +154,49 @@ const DepositCard: React.FC<DepositCardProps> = ({ deposit, onDelete, onUpdate }
         </Table>
       </TableContainer>
 
-      {/* Bouton pour générer l’étiquette */}
-      <Box className="flex justify-end mt-4">
-        <Button variant="contained" color="primary" onClick={generatePdf}>
+      <Box className="flex justify-between items-center mt-4">
+        {/* Bouton Télécharger */}
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<DownloadIcon />}
+          onClick={generatePdf}
+        >
           Télécharger l’étiquette
         </Button>
+
+        {/* Bouton Supprimer */}
+        <IconButton
+          color="error"
+          onClick={handleConfirmDelete}
+        >
+          <DeleteIcon fontSize="large" />
+        </IconButton>
       </Box>
+
+      {/* Dialogue de confirmation */}
+      <Dialog
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+      >
+        <DialogTitle>Confirmer la suppression</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Êtes-vous sûr de vouloir supprimer ce dépôt ?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)} color="secondary">
+            Annuler
+          </Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
+            Supprimer
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
 
 export default DepositCard;
+

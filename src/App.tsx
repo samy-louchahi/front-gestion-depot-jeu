@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import PrivateRoute from './components/PrivateRoutes';
 import SessionStats from './pages/SessionStats';
 import StockPage from './pages/StockPage';
+import GestionnaireList from './components/gestionnaires/GestionnaireList';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { useContext } from 'react';
 import { MenuIcon, XIcon } from '@heroicons/react/outline'; // Icônes du menu burger
@@ -71,6 +72,7 @@ const App: React.FC = () => {
           <Route path="/sales" element={<PrivateRoute><SalePage /></PrivateRoute>} />
           <Route path="/statistics" element={<PrivateRoute><SessionStats /></PrivateRoute>} />
           <Route path="/stocks" element={<PrivateRoute><StockPage /></PrivateRoute>} />
+          <Route path="/admin/gestionnaires" element={<PrivateRoute><GestionnaireList /></PrivateRoute>} />
         </Routes>
       </Router>
     </AuthProvider>
@@ -108,11 +110,16 @@ const NavigationButtons: React.FC = () => {
       <NavLink to="/sellers">Vendeurs</NavLink>
       <NavLink to="/buyers">Acheteurs</NavLink>
       <NavLink to="/games">Jeux</NavLink>
-      <NavLink to="/sessions">Session</NavLink>
       <NavLink to="/deposits">Dépôt</NavLink>
       <NavLink to="/sales">Vente</NavLink>
       <NavLink to="/stocks">Stocks</NavLink>
       <NavLink to="/statistics">Statistiques</NavLink>
+      {user.role === 'admin' && (
+        <>
+        <NavLink to="/admin/gestionnaires">Gestionnaires</NavLink>
+        <NavLink to="/sessions">Session</NavLink>
+        </>
+      )}
     </div>
   );
 };

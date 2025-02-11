@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { iconClasses, Typography } from '@mui/material';
+import { AuthContext } from '../contexts/AuthContext';
 
-// Icônes Heroicons ou personnalisées
 const icons = {
     seller: (
         <svg
@@ -116,17 +116,35 @@ const icons = {
         />
       </svg>
     ),
+    gestionnaire: (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-12 h-12 text-pink-500"
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16 7a4 4 0 10-8 0v1H5v9h14V8h-3V7zM6 12h12"
+            />
+        </svg>
+    ),
 };
 
 const DashboardPage: React.FC = () => {
+    const { user } = React.useContext(AuthContext);
     const menuItems = [
         { title: 'Vendeurs', path: '/sellers', icon: icons.seller },
-        { title: 'Sessions', path: '/sessions', icon: icons.session },
         { title: 'Dépôts', path: '/deposits', icon: icons.deposit },
         { title: 'Ventes', path: '/sales', icon: icons.sale },
         { title: 'Jeux', path: '/games', icon: icons.game },
         { title: 'Acheteurs', path: '/buyers', icon: icons.buyer },
         { title: 'Statistiques', path: '/statistics', icon: icons.statistics },
+
+        ...(user?.role === 'admin' ? [{ title: 'Gestionnaires', path: '/admin/gestionnaires', icon: icons.gestionnaire },{ title: 'Sessions', path: '/sessions', icon: icons.session },] : []),
     ];
 
     return (
