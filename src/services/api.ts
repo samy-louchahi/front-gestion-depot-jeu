@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'https://api-awi-depot-jeu.onrender.com',
+    baseURL: 'https://api-awi-depot-jeu.onrender.com/api',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -37,7 +37,7 @@ api.interceptors.response.use(
 
 
 const apiCsv = axios.create({
-    baseURL: 'https://api-awi-depot-jeu.onrender.com',
+    baseURL: 'https://api-awi-depot-jeu.onrender.com/api',
 });
 
 // Intercepteur pour inclure le token et définir le Content-Type
