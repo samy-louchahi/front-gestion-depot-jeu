@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:3000/api', // Remplace par l'URL de ton backend
+    baseURL: 'https://api-awi-depot-jeu.onrender.com',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -12,7 +12,7 @@ const api = axios.create({
 // Ajouter un intercepteur pour inclure le token
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token'); // Ou depuis les cookies
+        const token = localStorage.getItem('token'); 
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
