@@ -37,7 +37,7 @@ api.interceptors.response.use(
 
 
 const apiCsv = axios.create({
-    baseURL: 'http://localhost:3000/api',
+    baseURL: 'https://api-awi-depot-jeu.onrender.com',
 });
 
 // Intercepteur pour inclure le token et définir le Content-Type
